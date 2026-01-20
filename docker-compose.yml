@@ -1,0 +1,138 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ovhchecker
+      POSTGRES_PASSWORD: ovhchecker
+      POSTGRES_DB: ovhchecker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./db/seed_datacenters.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ovhchecker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # OPTION 1: Single checker handling all subsidiaries (legacy/simple mode)
+  # Uncomment this section for single-process mode
+  # ============================================================================
+  # checker:
+  #   build:
+  #     context: ./checker
+  #   environment:
+  #     DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+  #     CHECK_INTERVAL_SECONDS: "120"
+  #     NOTIFICATION_THRESHOLD_MINUTES: "60"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+  # ============================================================================
+  # OPTION 2: Distributed checkers - one per subsidiary (recommended for scaling)
+  # Each checker handles a single region, allowing horizontal scaling
+  # ============================================================================
+  checker-us:
+    build:
+      context: .
+      dockerfile: checker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      CHECK_INTERVAL_SECONDS: "120"
+      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      SUBSIDIARY: "US"
+      AGENT_ID: "checker-us"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  checker-ca:
+    build:
+      context: .
+      dockerfile: checker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      CHECK_INTERVAL_SECONDS: "120"
+      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      SUBSIDIARY: "CA"
+      AGENT_ID: "checker-ca"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  checker-fr:
+    build:
+      context: .
+      dockerfile: checker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      CHECK_INTERVAL_SECONDS: "120"
+      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      SUBSIDIARY: "FR"
+      AGENT_ID: "checker-fr"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  checker-de:
+    build:
+      context: .
+      dockerfile: checker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      CHECK_INTERVAL_SECONDS: "120"
+      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      SUBSIDIARY: "DE"
+      AGENT_ID: "checker-de"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  checker-gb:
+    build:
+      context: .
+      dockerfile: checker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      CHECK_INTERVAL_SECONDS: "120"
+      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      SUBSIDIARY: "GB"
+      AGENT_ID: "checker-gb"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+      CORS_ORIGINS: "*"
+      # JWT Authentication - CHANGE THIS IN PRODUCTION!
+      JWT_SECRET: "${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      # Set to "false" to disable public registration
+      ALLOW_REGISTRATION: "true"
+    ports:
+      - "8080:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

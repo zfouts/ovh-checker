@@ -1,0 +1,269 @@
+# ============================================================================
+# DISTRIBUTED CHECKER DEPLOYMENTS
+# Each deployment handles a single OVH subsidiary for horizontal scaling
+# ============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checker-us
+  namespace: ovh-checker
+  labels:
+    app: checker
+    subsidiary: us
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checker
+      subsidiary: us
+  template:
+    metadata:
+      labels:
+        app: checker
+        subsidiary: us
+    spec:
+      containers:
+        - name: checker
+          image: ovh-checker-checker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+            - name: NOTIFICATION_THRESHOLD_MINUTES
+              value: "60"
+            - name: SUBSIDIARY
+              value: "US"
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checker-ca
+  namespace: ovh-checker
+  labels:
+    app: checker
+    subsidiary: ca
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checker
+      subsidiary: ca
+  template:
+    metadata:
+      labels:
+        app: checker
+        subsidiary: ca
+    spec:
+      containers:
+        - name: checker
+          image: ovh-checker-checker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+            - name: NOTIFICATION_THRESHOLD_MINUTES
+              value: "60"
+            - name: SUBSIDIARY
+              value: "CA"
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checker-fr
+  namespace: ovh-checker
+  labels:
+    app: checker
+    subsidiary: fr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checker
+      subsidiary: fr
+  template:
+    metadata:
+      labels:
+        app: checker
+        subsidiary: fr
+    spec:
+      containers:
+        - name: checker
+          image: ovh-checker-checker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+            - name: NOTIFICATION_THRESHOLD_MINUTES
+              value: "60"
+            - name: SUBSIDIARY
+              value: "FR"
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checker-de
+  namespace: ovh-checker
+  labels:
+    app: checker
+    subsidiary: de
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checker
+      subsidiary: de
+  template:
+    metadata:
+      labels:
+        app: checker
+        subsidiary: de
+    spec:
+      containers:
+        - name: checker
+          image: ovh-checker-checker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+            - name: NOTIFICATION_THRESHOLD_MINUTES
+              value: "60"
+            - name: SUBSIDIARY
+              value: "DE"
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checker-gb
+  namespace: ovh-checker
+  labels:
+    app: checker
+    subsidiary: gb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checker
+      subsidiary: gb
+  template:
+    metadata:
+      labels:
+        app: checker
+        subsidiary: gb
+    spec:
+      containers:
+        - name: checker
+          image: ovh-checker-checker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+            - name: NOTIFICATION_THRESHOLD_MINUTES
+              value: "60"
+            - name: SUBSIDIARY
+              value: "GB"
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']

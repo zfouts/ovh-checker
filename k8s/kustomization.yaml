@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ovh-checker
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - checker.yaml
+  - api.yaml
+
+commonLabels:
+  app.kubernetes.io/name: ovh-checker
+  app.kubernetes.io/part-of: ovh-checker
