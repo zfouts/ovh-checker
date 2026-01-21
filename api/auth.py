@@ -153,9 +153,14 @@ def generate_api_key() -> Tuple[str, str]:
     """
     Generate an API key for programmatic access.
     Returns: (api_key, key_hash)
+    
+    Note: API keys use fast hashing (BLAKE2b) because unlike passwords:
+    - They are randomly generated with high entropy (256 bits)
+    - They need to be looked up by hash in the database
+    - Slow hashing would impact every API request
     """
     api_key = f"ovh_{secrets.token_urlsafe(32)}"
-    # Use BLAKE2b with key for secure API key hashing
+    # lgtm[py/weak-sensitive-data-hashing] - API key, not password; high entropy token
     key_hash = hashlib.blake2b(api_key.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
     return api_key, key_hash
 
@@ -172,7 +177,7 @@ async def get_user_from_api_key(
     if not api_key:
         return None
     
-    # Use BLAKE2b for secure comparison
+    # lgtm[py/weak-sensitive-data-hashing] - API key lookup, not password; fast hash required
     key_hash = hashlib.blake2b(api_key.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
     user = await db.get_user_by_api_key(key_hash)
     

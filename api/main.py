@@ -88,10 +88,11 @@ async def bootstrap_admin_user():
         logger.info(f"Email: {admin_email}")
         logger.info(f"Username: {admin_username}")
         if password_was_generated:
-            # Write password to stderr (typically not persisted) using sys.stderr
+            # Write password to stderr for one-time initial setup
+            # lgtm[py/clear-text-logging-sensitive-data] - Intentional one-time setup output
             import sys
             sys.stderr.write(f"\n{'=' * 60}\n")
-            sys.stderr.write(f"ADMIN PASSWORD (save this now): {password}\n")  # nosec B105
+            sys.stderr.write(f"ADMIN PASSWORD (save this now): {password}\n")  # lgtm[py/clear-text-logging-sensitive-data]
             sys.stderr.write(f"{'=' * 60}\n\n")
             sys.stderr.flush()
             logger.info("Password: [auto-generated, check container stderr]")
