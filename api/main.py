@@ -61,8 +61,13 @@ async def bootstrap_admin_user():
     if users:
         return  # Users already exist, skip bootstrap
     
-    # Generate random password
-    password = generate_secure_password(20)
+    # Use env var if provided, otherwise generate secure random password
+    password = os.environ.get('ADMIN_INITIAL_PASSWORD')
+    password_was_generated = False
+    if not password:
+        password = generate_secure_password(20)
+        password_was_generated = True
+    
     password_hash = hash_password(password)
     
     # Create admin user
@@ -82,12 +87,11 @@ async def bootstrap_admin_user():
         logger.info("=" * 60)
         logger.info(f"Email: {admin_email}")
         logger.info(f"Username: {admin_username}")
-        logger.info(f"Password: {'*' * 8} (check ADMIN_INITIAL_PASSWORD env var or container logs on first run only)")
-        # Log password only to stderr for immediate capture, not to persistent logs
-        import sys
-        print(f"\n*** INITIAL ADMIN PASSWORD: {password} ***\n", file=sys.stderr)
-        logger.info("=" * 60)
-        logger.info("Please change this password immediately after logging in!")
+        if password_was_generated:
+            logger.info(f"Password: {password}")
+            logger.info("(Auto-generated - please change immediately!)")
+        else:
+            logger.info("Password: [set via ADMIN_INITIAL_PASSWORD env var]")
         logger.info("=" * 60)
     except Exception as e:
         logger.error(f"Failed to create admin user: {e}")
@@ -152,8 +156,9 @@ async def health_check():
         # Test database connection
         await db.get_config("discord_webhook_url")
         return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+    except Exception:
+        # Don't expose exception details - security best practice
+        return {"status": "unhealthy", "database": "disconnected"}
 
 
 # ============ Static Files (Frontend) ============

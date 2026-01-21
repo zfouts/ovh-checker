@@ -6,19 +6,31 @@ import aiohttp
 import logging
 from typing import Optional, Tuple
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+# Allowed webhook hosts
+DISCORD_HOSTS = ('discord.com', 'discordapp.com')
+SLACK_HOSTS = ('hooks.slack.com',)
+
 
 def detect_webhook_type(url: str) -> str:
-    """Detect webhook type from URL."""
+    """Detect webhook type from URL using proper URL parsing."""
     if not url:
         return 'unknown'
-    url_lower = url.lower()
-    if 'discord.com' in url_lower or 'discordapp.com' in url_lower:
-        return 'discord'
-    elif 'hooks.slack.com' in url_lower:
-        return 'slack'
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return 'unknown'
+        hostname_lower = hostname.lower()
+        if hostname_lower in DISCORD_HOSTS or hostname_lower.endswith('.discord.com'):
+            return 'discord'
+        elif hostname_lower in SLACK_HOSTS or hostname_lower.endswith('.slack.com'):
+            return 'slack'
+    except Exception:
+        return 'unknown'
     return 'unknown'
 
 
