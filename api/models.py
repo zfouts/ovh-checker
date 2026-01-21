@@ -1,7 +1,32 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
+from enum import Enum
 import re
+
+
+# Password complexity regex pattern
+# Requires: 8+ chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char
+PASSWORD_PATTERN = re.compile(
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_+\-=\[\]{};:\'",.<>\\|`~])[A-Za-z\d@$!%*?&^#()_+\-=\[\]{};:\'",.<>\\|`~]{8,128}$'
+)
+
+
+def validate_password_complexity(password: str) -> str:
+    """Validate password meets complexity requirements."""
+    if len(password) < 8:
+        raise ValueError('Password must be at least 8 characters')
+    if len(password) > 128:
+        raise ValueError('Password must not exceed 128 characters')
+    if not re.search(r'[a-z]', password):
+        raise ValueError('Password must contain at least one lowercase letter')
+    if not re.search(r'[A-Z]', password):
+        raise ValueError('Password must contain at least one uppercase letter')
+    if not re.search(r'\d', password):
+        raise ValueError('Password must contain at least one digit')
+    if not re.search(r'[@$!%*?&^#()_+\-=\[\]{};:\'",.<>\\|`~]', password):
+        raise ValueError('Password must contain at least one special character (@$!%*?&^#()_+-=[]{};\':\",./<>\\|`~)')
+    return password
 
 
 # ============ Authentication Models ============
@@ -17,6 +42,11 @@ class UserRegister(BaseModel):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Username must be alphanumeric (underscores and hyphens allowed)')
         return v
+    
+    @field_validator('password')
+    @classmethod
+    def password_complexity(cls, v):
+        return validate_password_complexity(v)
 
 
 class UserLogin(BaseModel):
@@ -59,13 +89,24 @@ class UserProfileUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str = Field(..., min_length=8, max_length=128)
+    
+    @field_validator('new_password')
+    @classmethod
+    def password_complexity(cls, v):
+        return validate_password_complexity(v)
 
 
 # ============ User Webhook Models ============
 
+class WebhookType(str, Enum):
+    discord = "discord"
+    slack = "slack"
+
+
 class UserWebhookCreate(BaseModel):
     webhook_url: str = Field(..., min_length=10)
-    webhook_name: str = Field(default="My Discord", max_length=255)
+    webhook_name: str = Field(default="My Webhook", max_length=255)
+    webhook_type: Optional[WebhookType] = None  # Auto-detected if not provided
     # Discord customization options
     bot_username: Optional[str] = Field(None, max_length=80)
     avatar_url: Optional[str] = None
@@ -73,12 +114,18 @@ class UserWebhookCreate(BaseModel):
     include_specs: bool = True
     mention_role_id: Optional[str] = Field(None, max_length=50)
     embed_color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
+    # Slack-specific options
+    slack_channel: Optional[str] = Field(None, max_length=100)
     
     @field_validator('webhook_url')
     @classmethod
-    def validate_discord_webhook(cls, v):
-        if not v.startswith('https://discord.com/api/webhooks/') and not v.startswith('https://discordapp.com/api/webhooks/'):
-            raise ValueError('Must be a valid Discord webhook URL')
+    def validate_webhook_url(cls, v):
+        if not v.startswith('https://'):
+            raise ValueError('Webhook URL must use HTTPS')
+        # Check for valid webhook providers
+        valid_hosts = ['discord.com', 'discordapp.com', 'hooks.slack.com']
+        if not any(host in v.lower() for host in valid_hosts):
+            raise ValueError('Must be a valid Discord or Slack webhook URL')
         return v
     
     @field_validator('avatar_url')
@@ -97,6 +144,7 @@ class UserWebhookUpdate(BaseModel):
     include_specs: Optional[bool] = None
     mention_role_id: Optional[str] = Field(None, max_length=50)
     embed_color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
+    slack_channel: Optional[str] = Field(None, max_length=100)
     is_active: Optional[bool] = None
 
 
@@ -105,12 +153,14 @@ class UserWebhook(BaseModel):
     user_id: int
     webhook_url: str
     webhook_name: str
+    webhook_type: str = "discord"
     bot_username: Optional[str] = None
     avatar_url: Optional[str] = None
     include_price: bool = True
     include_specs: bool = True
     mention_role_id: Optional[str] = None
     embed_color: Optional[str] = None
+    slack_channel: Optional[str] = None
     is_active: bool
     created_at: datetime
 
@@ -185,6 +235,11 @@ class AdminUserCreate(BaseModel):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Username must be alphanumeric (underscores and hyphens allowed)')
         return v
+    
+    @field_validator('password')
+    @classmethod
+    def password_complexity(cls, v):
+        return validate_password_complexity(v)
 
 
 class AdminUserUpdate(BaseModel):
@@ -253,6 +308,18 @@ class DiscordWebhookConfig(BaseModel):
 
 class RegistrationToggle(BaseModel):
     allow_registration: bool
+
+
+class CheckerSettings(BaseModel):
+    """Checker agent configuration settings."""
+    check_interval_seconds: int = Field(..., ge=30, le=3600, description="Check interval in seconds (30-3600)")
+    notification_threshold_minutes: int = Field(..., ge=1, le=1440, description="Out-of-stock threshold before notifying (1-1440 minutes)")
+
+
+class CheckerSettingsResponse(BaseModel):
+    """Response for checker settings."""
+    check_interval_seconds: int
+    notification_threshold_minutes: int
 
 
 class MonitoredPlanCreate(BaseModel):

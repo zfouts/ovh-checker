@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: api
   namespace: ovh-checker
+  labels:
+    app: api
 spec:
   replicas: 1
   selector:
@@ -13,24 +15,41 @@ spec:
       labels:
         app: api
     spec:
+      imagePullSecrets:
+        - name: ghcr-io
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: edge
+                operator: NotIn
+                values:
+                - "true"
       containers:
         - name: api
-          image: ovh-checker-api:latest
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/zfouts/ovh-checker-api:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
+              name: http
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: JWT_SECRET
             - name: API_HOST
               value: "0.0.0.0"
             - name: API_PORT
               value: "8000"
             - name: CORS_ORIGINS
-              value: "*"
+              value: "https://ovh-checker.k8s.biz"
           resources:
             requests:
               memory: "64Mi"
@@ -67,23 +86,3 @@ spec:
     - port: 80
       targetPort: 8000
   type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: api-ingress
-  namespace: ovh-checker
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-spec:
-  rules:
-    - host: ovh-checker.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: api
-                port:
-                  number: 80

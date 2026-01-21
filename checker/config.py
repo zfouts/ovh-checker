@@ -3,11 +3,19 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 
+def _get_database_url() -> str:
+    """Get database URL, raising error if not set."""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is required. "
+            "Example: postgresql://user:pass@host:5432/dbname"
+        )
+    return url
+
+
 class Settings(BaseSettings):
-    database_url: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://ovhchecker:ovhchecker@localhost:5432/ovhchecker"
-    )
+    database_url: str = _get_database_url()
     check_interval_seconds: int = int(os.getenv("CHECK_INTERVAL_SECONDS", "120"))
     notification_threshold_minutes: int = int(os.getenv("NOTIFICATION_THRESHOLD_MINUTES", "60"))
     

@@ -114,17 +114,10 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- DEFAULT ADMIN USER (password: changeme - MUST be changed in production!)
+-- ADMIN USER BOOTSTRAP
 -- ============================================================================
--- Password hash for 'changeme' using bcrypt
--- You should change this immediately after deployment
-INSERT INTO users (email, username, password_hash, is_active, is_admin)
-VALUES (
-    'admin@example.com', 
-    'admin', 
-    '$2b$12$NrsJtLEanYtMj2Vz1ZC7vuM.qEM/MdIsyXR2v/GVVWcoHuXi0ksuC',  -- 'changeme'
-    TRUE, 
-    TRUE
-)
-ON CONFLICT (email) DO NOTHING;
+-- NOTE: Admin user is now created automatically by the API on first startup
+-- with a secure randomly generated password that is logged to stdout.
+-- Check the API logs after first deployment to get the initial password.
+-- Environment variables ADMIN_EMAIL and ADMIN_USERNAME can customize the admin account.
 

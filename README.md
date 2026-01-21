@@ -75,7 +75,8 @@ Example output:
 ============================================================
 🔐 INITIAL ADMIN USER CREATED
 ============================================================
-   Email:    admin@example.com
+   Email:    admin@example.com (or ADMIN_EMAIL env var)
+   Password: Check API logs on first startup for generated password
    Username: admin
    Password: xK9mP2nL5qR8vT4w
 ============================================================
@@ -109,20 +110,44 @@ Admins can disable public registration from the Admin tab.
 
 ## Configuration
 
-### Environment Variables
+### Required Environment Variables
+
+These variables **must** be set before the application will start:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string. Generate password with: `openssl rand -base64 24` |
+| `JWT_SECRET` | Secret key for JWT tokens. Generate with: `openssl rand -base64 32` |
+| `POSTGRES_PASSWORD` | PostgreSQL password (for docker-compose). Generate with: `openssl rand -base64 24` |
+
+### Optional Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
 | `CHECK_INTERVAL_SECONDS` | `120` | How often to check OVH API |
 | `NOTIFICATION_THRESHOLD_MINUTES` | `60` | Minimum out-of-stock time before notification |
-| `JWT_SECRET` | *(required)* | Secret key for JWT tokens - **change in production!** |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | JWT access token lifetime |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token lifetime |
 | `ALLOW_REGISTRATION` | `true` | Allow public user registration |
 | `API_HOST` | `0.0.0.0` | API bind address |
 | `API_PORT` | `8000` | API port |
-| `CORS_ORIGINS` | `*` | Allowed CORS origins |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins (use specific domains in production) |
+| `POSTGRES_USER` | `ovhchecker` | PostgreSQL username |
+| `POSTGRES_DB` | `ovhchecker` | PostgreSQL database name |
+
+### Quick Setup
+
+```bash
+# Copy the example .env file
+cp .env.example .env
+
+# Generate and set required secrets
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 24)" >> .env
+echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
+
+# Update DATABASE_URL with your password
+# Edit .env and replace YOUR_PASSWORD_HERE with the generated POSTGRES_PASSWORD
+```
 
 ### Discord Webhook Setup
 
@@ -338,7 +363,3 @@ If you're upgrading from a version without authentication:
    ```
 3. Update environment variables to include `JWT_SECRET`
 4. Rebuild and restart containers
-
-## License
-
-MIT

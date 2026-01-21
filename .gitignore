@@ -60,3 +60,4 @@ k8s/secrets.yaml
 # Local development
 .env.local
 *.local
+k8s/secrets.yaml

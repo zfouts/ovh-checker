@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 from database import Database
 from discord_notifier import send_discord_notification, send_notifications_to_all
 from pricing_fetcher import PricingFetcher
+from catalog_fetcher import get_datacenter_location
 from config import settings
 
 logging.basicConfig(
@@ -88,6 +89,20 @@ class OVHChecker:
             is_available = avail["is_available"]
             linux_status = avail.get("linux_status", "unknown")
 
+            # Ensure datacenter location is stored with proper display name
+            if datacenter_code:
+                loc = get_datacenter_location(datacenter_code)
+                await self.db.upsert_datacenter_location(
+                    datacenter_code=datacenter_code,
+                    subsidiary=self.subsidiary,
+                    display_name=loc['display_name'],
+                    city=loc['city'],
+                    country=loc['country'],
+                    country_code=loc['country_code'],
+                    flag=loc['flag'],
+                    region=loc['region']
+                )
+
             # Save current status with subsidiary
             await self.db.save_inventory_status(
                 plan_code,
@@ -109,7 +124,10 @@ class OVHChecker:
                     # It was out of stock, now it's back!
                     out_of_stock_minutes = await self.db.mark_returned_to_stock(plan_code, datacenter, self.subsidiary)
                     
-                    if out_of_stock_minutes and out_of_stock_minutes >= settings.notification_threshold_minutes:
+                    # Get notification threshold from database (allows dynamic updates)
+                    notification_threshold = await get_notification_threshold(self.db)
+                    
+                    if out_of_stock_minutes and out_of_stock_minutes >= notification_threshold:
                         # Send notifications to default webhook AND all subscribed users
                         plan_info = await self.db.get_plan_info(plan_code, self.subsidiary)
                         
@@ -153,6 +171,28 @@ class OVHChecker:
             await asyncio.sleep(1)
 
 
+async def get_check_interval(db: Database) -> int:
+    """Get check interval from database, falling back to env/default."""
+    try:
+        interval = await db.get_config("check_interval_seconds")
+        if interval:
+            return max(30, min(3600, int(interval)))  # Clamp between 30s and 1h
+    except (ValueError, TypeError):
+        pass
+    return settings.check_interval_seconds
+
+
+async def get_notification_threshold(db: Database) -> int:
+    """Get notification threshold from database, falling back to env/default."""
+    try:
+        threshold = await db.get_config("notification_threshold_minutes")
+        if threshold:
+            return max(1, min(1440, int(threshold)))  # Clamp between 1min and 24h
+    except (ValueError, TypeError):
+        pass
+    return settings.notification_threshold_minutes
+
+
 async def run_single_subsidiary_mode(db: Database, subsidiary: str):
     """
     Run checker for a single subsidiary.
@@ -185,8 +225,10 @@ async def run_single_subsidiary_mode(db: Database, subsidiary: str):
                 result = await catalog_fetcher.discover_and_sync_plans()
                 logger.info(f"[{agent_id}] Catalog sync result: {result}")
             
-            logger.info(f"[{agent_id}] Check cycle complete. Sleeping for {settings.check_interval_seconds}s...")
-            await asyncio.sleep(settings.check_interval_seconds)
+            # Get current check interval from database (allows dynamic updates)
+            check_interval = await get_check_interval(db)
+            logger.info(f"[{agent_id}] Check cycle complete. Sleeping for {check_interval}s...")
+            await asyncio.sleep(check_interval)
     except asyncio.CancelledError:
         logger.info(f"[{agent_id}] Received shutdown signal")
         raise
@@ -231,8 +273,10 @@ async def run_multi_subsidiary_mode(db: Database):
                     result = await catalog_fetcher.discover_and_sync_plans()
                     logger.info(f"Catalog sync result for {subsidiary}: {result}")
             
-            logger.info(f"Check cycle complete. Sleeping for {settings.check_interval_seconds} seconds...")
-            await asyncio.sleep(settings.check_interval_seconds)
+            # Get current check interval from database (allows dynamic updates)
+            check_interval = await get_check_interval(db)
+            logger.info(f"Check cycle complete. Sleeping for {check_interval} seconds...")
+            await asyncio.sleep(check_interval)
     except asyncio.CancelledError:
         logger.info("Received shutdown signal")
         raise

@@ -329,8 +329,9 @@ class Database:
         self,
         datacenter_code: str,
         subsidiary: str,
-        city: str,
-        country: str,
+        display_name: str = "",
+        city: str = "",
+        country: str = "",
         country_code: str = "",
         flag: str = "🌐",
         region: str = "OTHER"
@@ -340,6 +341,7 @@ class Database:
             stmt = pg_insert(DatacenterLocation).values(
                 datacenter_code=datacenter_code,
                 subsidiary=subsidiary,
+                display_name=display_name or city,  # Fallback to city if no display_name
                 city=city,
                 country=country,
                 country_code=country_code,
@@ -348,6 +350,7 @@ class Database:
             ).on_conflict_do_update(
                 index_elements=['datacenter_code', 'subsidiary'],
                 set_={
+                    'display_name': display_name or city,
                     'city': city,
                     'country': country,
                     'country_code': country_code,

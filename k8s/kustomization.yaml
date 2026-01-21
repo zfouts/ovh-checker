@@ -3,14 +3,21 @@ kind: Kustomization
 
 namespace: ovh-checker
 
+# NOTE: secrets.yaml is NOT included - create it from secrets.yaml.example
+# and populate with real values before deployment:
+#   cp secrets.yaml.example secrets.yaml
+#   # Edit secrets.yaml with secure values
 resources:
   - namespace.yaml
-  - secrets.yaml
+  # - secrets.yaml  # Create from secrets.yaml.example with real values
   - configmap.yaml
   - postgres.yaml
   - checker.yaml
   - api.yaml
+  - ingress.yaml
 
-commonLabels:
-  app.kubernetes.io/name: ovh-checker
-  app.kubernetes.io/part-of: ovh-checker
+labels:
+  - pairs:
+      app.kubernetes.io/name: ovh-checker
+      app.kubernetes.io/part-of: ovh-checker
+    includeSelectors: false

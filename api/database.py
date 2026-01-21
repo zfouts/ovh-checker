@@ -379,26 +379,30 @@ class Database:
         self, 
         user_id: int, 
         webhook_url: str, 
-        webhook_name: str = "My Discord",
+        webhook_name: str = "My Webhook",
+        webhook_type: str = "discord",
         bot_username: Optional[str] = None,
         avatar_url: Optional[str] = None,
         include_price: bool = True,
         include_specs: bool = True,
         mention_role_id: Optional[str] = None,
-        embed_color: Optional[str] = None
+        embed_color: Optional[str] = None,
+        slack_channel: Optional[str] = None
     ) -> int:
-        """Create a user webhook with Discord customization options."""
+        """Create a user webhook with customization options (Discord or Slack)."""
         async with self._session() as session:
             webhook = UserWebhook(
                 user_id=user_id,
                 webhook_url=webhook_url,
                 webhook_name=webhook_name,
+                webhook_type=webhook_type,
                 bot_username=bot_username,
                 avatar_url=avatar_url,
                 include_price=include_price,
                 include_specs=include_specs,
                 mention_role_id=mention_role_id,
-                embed_color=embed_color
+                embed_color=embed_color,
+                slack_channel=slack_channel
             )
             session.add(webhook)
             await session.commit()
@@ -419,12 +423,14 @@ class Database:
                     'user_id': wh.user_id,
                     'webhook_url': wh.webhook_url,
                     'webhook_name': wh.webhook_name,
+                    'webhook_type': wh.webhook_type,
                     'bot_username': wh.bot_username,
                     'avatar_url': wh.avatar_url,
                     'include_price': wh.include_price,
                     'include_specs': wh.include_specs,
                     'mention_role_id': wh.mention_role_id,
                     'embed_color': wh.embed_color,
+                    'slack_channel': wh.slack_channel,
                     'is_active': wh.is_active,
                     'created_at': wh.created_at,
                     'updated_at': wh.updated_at
@@ -446,12 +452,14 @@ class Database:
                     'user_id': wh.user_id,
                     'webhook_url': wh.webhook_url,
                     'webhook_name': wh.webhook_name,
+                    'webhook_type': wh.webhook_type,
                     'bot_username': wh.bot_username,
                     'avatar_url': wh.avatar_url,
                     'include_price': wh.include_price,
                     'include_specs': wh.include_specs,
                     'mention_role_id': wh.mention_role_id,
                     'embed_color': wh.embed_color,
+                    'slack_channel': wh.slack_channel,
                     'is_active': wh.is_active,
                     'created_at': wh.created_at,
                     'updated_at': wh.updated_at
@@ -469,6 +477,7 @@ class Database:
         include_specs: Optional[bool] = None,
         mention_role_id: Optional[str] = None,
         embed_color: Optional[str] = None,
+        slack_channel: Optional[str] = None,
         is_active: Optional[bool] = None
     ) -> bool:
         """Update a user webhook."""
@@ -488,6 +497,8 @@ class Database:
             updates['mention_role_id'] = mention_role_id
         if embed_color is not None:
             updates['embed_color'] = embed_color
+        if slack_channel is not None:
+            updates['slack_channel'] = slack_channel
         if is_active is not None:
             updates['is_active'] = is_active
         

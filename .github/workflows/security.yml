@@ -1,0 +1,199 @@
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # Python dependency scanning with pip-audit
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Scan API dependencies
+        run: |
+          pip-audit -r api/requirements.txt --desc on --format columns || true
+
+      - name: Scan Checker dependencies
+        run: |
+          pip-audit -r checker/requirements.txt --desc on --format columns || true
+
+  # Static Application Security Testing with Bandit
+  sast-bandit:
+    name: Python SAST (Bandit)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Bandit with SARIF support
+        run: pip install bandit[toml] bandit-sarif-formatter
+
+      - name: Run Bandit security scan
+        continue-on-error: true
+        run: |
+          bandit -r api/ checker/ shared/ -f sarif -o bandit-results.sarif --severity-level medium || true
+          # Ensure file exists even if bandit finds nothing or fails
+          if [ ! -f bandit-results.sarif ]; then
+            echo '{"version": "2.1.0", "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json", "runs": [{"tool": {"driver": {"name": "Bandit", "version": "1.0.0"}}, "results": []}]}' > bandit-results.sarif
+          fi
+
+      - name: Upload Bandit SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+
+  # Secret scanning with Gitleaks
+  secret-scan:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true
+
+  # Container image scanning with Trivy
+  container-scan:
+    name: Container Vulnerability Scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build API image for scanning
+        run: docker build -t ovh-checker-api:scan -f api/Dockerfile .
+
+      - name: Build Checker image for scanning
+        run: docker build -t ovh-checker-checker:scan -f checker/Dockerfile .
+
+      - name: Run Trivy on API image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ovh-checker-api:scan'
+          format: 'sarif'
+          output: 'trivy-api-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy on Checker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ovh-checker-checker:scan'
+          format: 'sarif'
+          output: 'trivy-checker-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy API SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-api-results.sarif
+          category: trivy-api
+
+      - name: Upload Trivy Checker SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-checker-results.sarif
+          category: trivy-checker
+
+  # Kubernetes manifest scanning
+  k8s-scan:
+    name: Kubernetes Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy on Kubernetes manifests
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'k8s/'
+          format: 'sarif'
+          output: 'trivy-k8s-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy K8s SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-k8s-results.sarif
+          category: trivy-k8s
+
+  # CodeQL analysis for semantic code scanning
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        continue-on-error: true
+        with:
+          category: codeql-python

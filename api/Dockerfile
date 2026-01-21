@@ -2,6 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Build arguments for version info
+ARG BUILD_SHA=dev
+ARG BUILD_DATE=unknown
+
+# Set environment variables from build args
+ENV BUILD_SHA=${BUILD_SHA}
+ENV BUILD_DATE=${BUILD_DATE}
+
 # Install dependencies
 COPY api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -11,7 +19,14 @@ COPY shared/ /app/shared/
 
 # Copy application code
 COPY api/*.py .
+COPY api/routers/ routers/
+COPY api/services/ services/
 COPY api/static/ static/
+
+# Inject build info into static HTML (use first 7 chars of SHA)
+RUN SHORT_SHA=$(echo "${BUILD_SHA}" | cut -c1-7) && \
+    sed -i "s/__BUILD_SHA__/${SHORT_SHA}/g" static/index.html && \
+    sed -i "s/__BUILD_DATE__/${BUILD_DATE}/g" static/index.html
 
 # Expose port
 EXPOSE 8000

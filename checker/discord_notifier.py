@@ -1,8 +1,12 @@
-import aiohttp
+"""
+Discord and Slack notification handler.
+Uses the unified WebhookNotifier for actual sending.
+"""
 import logging
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 from catalog_fetcher import get_purchase_url, get_subsidiary_name, DEFAULT_SUBSIDIARY
+from webhook_notifier import WebhookNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -15,73 +19,48 @@ async def send_discord_notification(
     is_test: bool = False,
     plan_info: Optional[Dict[str, Any]] = None,
     user_info: Optional[Dict[str, Any]] = None,
-    subsidiary: str = 'US'
+    subsidiary: str = 'US',
+    webhook_type: str = 'discord'
 ) -> Tuple[bool, Optional[str]]:
-    """Send a Discord webhook notification."""
+    """Send a webhook notification (Discord or Slack)."""
     if not webhook_url:
-        return False, "Discord webhook URL not configured"
+        return False, "Webhook URL not configured"
+
+    # Auto-detect webhook type if not specified
+    if not webhook_type:
+        webhook_type = WebhookNotifier.detect_webhook_type(webhook_url)
 
     if is_test:
-        embed = {
-            "title": "Test Notification",
-            "description": "This is a test notification from OVH Inventory Checker",
-            "color": 3447003,
-            "fields": [
-                {"name": "Status", "value": "Webhook is working correctly!", "inline": False}
-            ],
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    else:
-        display_name = plan_info.get("display_name", plan_code) if plan_info else plan_code
-        price = plan_info.get("price", "N/A") if plan_info else "N/A"
-        default_purchase_url = get_purchase_url(subsidiary)
-        purchase_url = plan_info.get("purchase_url", default_purchase_url) if plan_info else default_purchase_url
-        subsidiary_name = get_subsidiary_name(subsidiary)
-        
-        embed = {
-            "title": f"🟢 VPS Back in Stock! ({subsidiary})",
-            "description": f"**{display_name}** is now available in {subsidiary_name}!",
-            "color": 5763719,
-            "fields": [
-                {"name": "Plan", "value": plan_code, "inline": True},
-                {"name": "Datacenter", "value": datacenter, "inline": True},
-                {"name": "Region", "value": subsidiary_name, "inline": True},
-                {"name": "Price", "value": price, "inline": True},
-                {"name": "Out of Stock Duration", "value": f"{out_of_stock_minutes} minutes", "inline": True},
-                {"name": "Order Now", "value": f"[Click here to order]({purchase_url})", "inline": False}
-            ],
-            "timestamp": datetime.utcnow().isoformat(),
-            "footer": {"text": f"OVH Inventory Checker • {subsidiary_name}"}
-        }
-        
-        # Add user-specific info if this is a personalized notification
-        if user_info and user_info.get("webhook_name"):
-            embed["footer"]["text"] = f"OVH Inventory Checker • {user_info['webhook_name']} • {subsidiary_name}"
-
-    payload = {
-        "username": "OVH Stock Alert",
-        "embeds": [embed]
-    }
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                webhook_url,
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            ) as response:
-                if response.status in (200, 204):
-                    logger.info(f"[{subsidiary}] Discord notification sent for {plan_code}/{datacenter}")
-                    return True, None
-                else:
-                    error_text = await response.text()
-                    error_msg = f"Discord API returned {response.status}: {error_text}"
-                    logger.error(error_msg)
-                    return False, error_msg
-    except Exception as e:
-        error_msg = f"Failed to send Discord notification: {str(e)}"
-        logger.error(error_msg)
-        return False, error_msg
+        bot_username = user_info.get("bot_username") if user_info else None
+        success, message = await WebhookNotifier.send_test_notification(
+            webhook_url, webhook_type, bot_username
+        )
+        return success, None if success else message
+    
+    # Prepare notification parameters
+    kwargs = {}
+    if user_info:
+        kwargs['bot_username'] = user_info.get('bot_username')
+        kwargs['webhook_name'] = user_info.get('webhook_name', 'Personal Alert')
+        kwargs['mention_role_id'] = user_info.get('mention_role_id')
+        kwargs['embed_color'] = user_info.get('embed_color')
+        kwargs['slack_channel'] = user_info.get('slack_channel')
+    
+    success, error = await WebhookNotifier.send_stock_notification(
+        webhook_url=webhook_url,
+        webhook_type=webhook_type,
+        plan_code=plan_code,
+        datacenter=datacenter,
+        out_of_stock_minutes=out_of_stock_minutes,
+        plan_info=plan_info,
+        subsidiary=subsidiary,
+        **kwargs
+    )
+    
+    if success:
+        logger.info(f"[{subsidiary}] {webhook_type.capitalize()} notification sent for {plan_code}/{datacenter}")
+    
+    return success, error
 
 
 async def send_notifications_to_all(
@@ -95,7 +74,7 @@ async def send_notifications_to_all(
     """
     Send notifications to:
     1. Default system webhook (if configured)
-    2. All users subscribed to this plan
+    2. All users subscribed to this plan (supports both Discord and Slack)
     
     Returns a summary of notification results.
     """
@@ -104,7 +83,7 @@ async def send_notifications_to_all(
         "user_webhooks": []
     }
     
-    # 1. Send to default system webhook
+    # 1. Send to default system webhook (Discord)
     default_webhook_url = await db.get_config("discord_webhook_url")
     if default_webhook_url:
         success, error = await send_discord_notification(
@@ -113,7 +92,8 @@ async def send_notifications_to_all(
             datacenter,
             out_of_stock_minutes,
             plan_info=plan_info,
-            subsidiary=subsidiary
+            subsidiary=subsidiary,
+            webhook_type='discord'
         )
         results["default_webhook"] = {"sent": True, "success": success, "error": error}
         
@@ -137,14 +117,44 @@ async def send_notifications_to_all(
             is_default_webhook=True
         )
     
-    # 2. Send to all users subscribed to this plan in this subsidiary
+    # 2. Check for default Slack webhook as well
+    default_slack_url = await db.get_config("slack_webhook_url")
+    if default_slack_url:
+        success, error = await send_discord_notification(
+            default_slack_url,
+            plan_code,
+            datacenter,
+            out_of_stock_minutes,
+            plan_info=plan_info,
+            subsidiary=subsidiary,
+            webhook_type='slack'
+        )
+        
+        # Save to notification history
+        await db.save_user_notification(
+            plan_code=plan_code,
+            datacenter=datacenter,
+            message=f"Back in stock after {out_of_stock_minutes} minutes (Slack)",
+            success=success,
+            error_message=error,
+            is_default_webhook=True
+        )
+    
+    # 3. Send to all users subscribed to this plan in this subsidiary
     subscribed_users = await db.get_users_subscribed_to_plan(plan_code, subsidiary)
     
     for user in subscribed_users:
+        # Get webhook type (default to discord for backwards compatibility)
+        webhook_type = user.get("webhook_type", "discord")
+        
         user_info = {
             "user_id": user["user_id"],
             "webhook_id": user["webhook_id"],
-            "webhook_name": user.get("webhook_name", "Personal Alert")
+            "webhook_name": user.get("webhook_name", "Personal Alert"),
+            "bot_username": user.get("bot_username"),
+            "mention_role_id": user.get("mention_role_id"),
+            "embed_color": user.get("embed_color"),
+            "slack_channel": user.get("slack_channel")
         }
         
         success, error = await send_discord_notification(
@@ -154,12 +164,14 @@ async def send_notifications_to_all(
             out_of_stock_minutes,
             plan_info=plan_info,
             user_info=user_info,
-            subsidiary=subsidiary
+            subsidiary=subsidiary,
+            webhook_type=webhook_type
         )
         
         results["user_webhooks"].append({
             "user_id": user["user_id"],
             "webhook_id": user["webhook_id"],
+            "webhook_type": webhook_type,
             "success": success,
             "error": error
         })
@@ -176,6 +188,6 @@ async def send_notifications_to_all(
             is_default_webhook=False
         )
         
-        logger.info(f"[{subsidiary}] User notification {'sent' if success else 'failed'} for user {user['user_id']}: {plan_code}/{datacenter}")
+        logger.info(f"[{subsidiary}] User {webhook_type} notification {'sent' if success else 'failed'} for user {user['user_id']}: {plan_code}/{datacenter}")
     
     return results

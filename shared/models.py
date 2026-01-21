@@ -171,19 +171,21 @@ class UserGroup(Base):
 # =============================================================================
 
 class UserWebhook(Base):
-    """User Discord webhooks with customization options."""
+    """User webhooks (Discord and Slack) with customization options."""
     __tablename__ = "user_webhooks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     webhook_url: Mapped[str] = mapped_column(Text, nullable=False)
-    webhook_name: Mapped[str] = mapped_column(String(255), default="My Discord")
+    webhook_name: Mapped[str] = mapped_column(String(255), default="My Webhook")
+    webhook_type: Mapped[str] = mapped_column(String(20), default="discord")  # discord, slack
     bot_username: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     include_price: Mapped[bool] = mapped_column(Boolean, default=True)
     include_specs: Mapped[bool] = mapped_column(Boolean, default=True)
     mention_role_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     embed_color: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    slack_channel: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Slack channel override
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -197,6 +199,7 @@ class UserWebhook(Base):
 
     __table_args__ = (
         Index("idx_user_webhooks_user_id", "user_id"),
+        Index("idx_user_webhooks_type", "webhook_type"),
     )
 
 

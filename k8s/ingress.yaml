@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ovh-checker-api
+  namespace: ovh-checker
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/hostname: ovh-checker.k8s.biz
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - ovh-checker.k8s.biz
+    secretName: ovh-checker-tls
+  rules:
+  - host: ovh-checker.k8s.biz
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 80

@@ -67,6 +67,59 @@ SUBSIDIARY_WEBSITE_URLS = {
 
 DEFAULT_SUBSIDIARY = 'US'
 
+# Comprehensive datacenter code to location mapping
+# Maps lowercase datacenter codes to display names, cities, and countries
+DATACENTER_LOCATIONS = {
+    # US Regions - Main
+    'us-east-vin': {'display_name': 'Virginia', 'city': 'Vint Hill', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-west-hil': {'display_name': 'Oregon', 'city': 'Hillsboro', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    # US Local Zones
+    'us-east-lz-atl': {'display_name': 'Atlanta', 'city': 'Atlanta', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-east-lz-dal': {'display_name': 'Dallas', 'city': 'Dallas', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-east-lz-mia': {'display_name': 'Miami', 'city': 'Miami', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-east-lz-nyc': {'display_name': 'New York', 'city': 'New York', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-west-lz-den': {'display_name': 'Denver', 'city': 'Denver', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-west-lz-lax': {'display_name': 'Los Angeles', 'city': 'Los Angeles', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-west-lz-pao': {'display_name': 'Palo Alto', 'city': 'Palo Alto', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    'us-west-lz-sea': {'display_name': 'Seattle', 'city': 'Seattle', 'country': 'United States', 'country_code': 'US', 'flag': '🇺🇸', 'region': 'US'},
+    # Canada
+    'ca-east-bhs': {'display_name': 'Beauharnois', 'city': 'Beauharnois', 'country': 'Canada', 'country_code': 'CA', 'flag': '🇨🇦', 'region': 'CA'},
+    # Europe - Main
+    'eu-west-gra': {'display_name': 'Gravelines', 'city': 'Gravelines', 'country': 'France', 'country_code': 'FR', 'flag': '🇫🇷', 'region': 'EU'},
+    'eu-west-sbg': {'display_name': 'Strasbourg', 'city': 'Strasbourg', 'country': 'France', 'country_code': 'FR', 'flag': '🇫🇷', 'region': 'EU'},
+    'eu-west-lim': {'display_name': 'Frankfurt', 'city': 'Frankfurt', 'country': 'Germany', 'country_code': 'DE', 'flag': '🇩🇪', 'region': 'EU'},
+    'eu-west-eri': {'display_name': 'London', 'city': 'London', 'country': 'United Kingdom', 'country_code': 'GB', 'flag': '🇬🇧', 'region': 'EU'},
+    'eu-central-waw': {'display_name': 'Warsaw', 'city': 'Warsaw', 'country': 'Poland', 'country_code': 'PL', 'flag': '🇵🇱', 'region': 'EU'},
+    'eu-south-mil': {'display_name': 'Milan', 'city': 'Milan', 'country': 'Italy', 'country_code': 'IT', 'flag': '🇮🇹', 'region': 'EU'},
+    # Europe Local Zones
+    'eu-west-lz-ams': {'display_name': 'Amsterdam', 'city': 'Amsterdam', 'country': 'Netherlands', 'country_code': 'NL', 'flag': '🇳🇱', 'region': 'EU'},
+    'eu-west-lz-bru': {'display_name': 'Brussels', 'city': 'Brussels', 'country': 'Belgium', 'country_code': 'BE', 'flag': '🇧🇪', 'region': 'EU'},
+    'eu-west-lz-vie': {'display_name': 'Vienna', 'city': 'Vienna', 'country': 'Austria', 'country_code': 'AT', 'flag': '🇦🇹', 'region': 'EU'},
+    'eu-west-lz-mrs': {'display_name': 'Marseille', 'city': 'Marseille', 'country': 'France', 'country_code': 'FR', 'flag': '🇫🇷', 'region': 'EU'},
+    'eu-west-lz-zrh': {'display_name': 'Zurich', 'city': 'Zurich', 'country': 'Switzerland', 'country_code': 'CH', 'flag': '🇨🇭', 'region': 'EU'},
+    'eu-central-lz-prg': {'display_name': 'Prague', 'city': 'Prague', 'country': 'Czech Republic', 'country_code': 'CZ', 'flag': '🇨🇿', 'region': 'EU'},
+    'eu-south-lz-mad': {'display_name': 'Madrid', 'city': 'Madrid', 'country': 'Spain', 'country_code': 'ES', 'flag': '🇪🇸', 'region': 'EU'},
+    # Asia Pacific
+    'ap-south-mum': {'display_name': 'Mumbai', 'city': 'Mumbai', 'country': 'India', 'country_code': 'IN', 'flag': '🇮🇳', 'region': 'APAC'},
+    'ap-southeast-sgp': {'display_name': 'Singapore', 'city': 'Singapore', 'country': 'Singapore', 'country_code': 'SG', 'flag': '🇸🇬', 'region': 'APAC'},
+    'ap-southeast-syd': {'display_name': 'Sydney', 'city': 'Sydney', 'country': 'Australia', 'country_code': 'AU', 'flag': '🇦🇺', 'region': 'APAC'},
+}
+
+def get_datacenter_location(dc_code: str) -> Dict[str, str]:
+    """Get location info for a datacenter code."""
+    dc_code_lower = dc_code.lower()
+    if dc_code_lower in DATACENTER_LOCATIONS:
+        return DATACENTER_LOCATIONS[dc_code_lower].copy()
+    # Fallback - use the code as display name
+    return {
+        'display_name': dc_code.upper(),
+        'city': dc_code.upper(),
+        'country': 'Unknown',
+        'country_code': '',
+        'flag': '🌐',
+        'region': 'OTHER'
+    }
+
 def get_catalog_url(subsidiary: str) -> str:
     """Get the catalog API URL for a subsidiary."""
     base = SUBSIDIARY_URLS.get(subsidiary.upper(), SUBSIDIARY_URLS['US'])
@@ -440,17 +493,19 @@ class CatalogFetcher:
         for spec in specs:
             url = self.get_availability_url(spec.plan_code)
             
-            # Determine display name
+            # Determine display name - check LZ first since it can have -eu suffix
             display_name = spec.invoice_name
-            if spec.plan_code.endswith('-eu'):
+            if '.LZ' in spec.plan_code:
+                if '-eu' in spec.plan_code:
+                    display_name += ' (EU Local Zone)'
+                elif '-ca' in spec.plan_code:
+                    display_name += ' (CA Local Zone)'
+                else:
+                    display_name += ' (Local Zone)'
+            elif spec.plan_code.endswith('-eu'):
                 display_name += ' (EU)'
             elif spec.plan_code.endswith('-ca'):
                 display_name += ' (Canada)'
-            elif '.LZ' in spec.plan_code:
-                if '-eu' in spec.plan_code:
-                    display_name += ' (EU Local Zone)'
-                else:
-                    display_name += ' (Local Zone)'
             
             # Upsert plan with visibility info
             visibility_tags_str = ','.join(spec.visibility_tags) if spec.visibility_tags else None
@@ -491,14 +546,17 @@ class CatalogFetcher:
         for dc_name, loc_info in datacenter_locations.items():
             dc_code = dc_code_mapping.get(dc_name)
             if dc_code:
+                # Use our comprehensive mapping for accurate location data
+                known_location = get_datacenter_location(dc_code)
                 await self.db.upsert_datacenter_location(
                     datacenter_code=dc_code,
                     subsidiary=self.subsidiary,
-                    city=loc_info['city'],
-                    country=loc_info['country'],
-                    country_code=loc_info['country_code'],
-                    flag=loc_info['flag'],
-                    region=loc_info['region']
+                    display_name=known_location['display_name'],
+                    city=known_location['city'],
+                    country=known_location['country'],
+                    country_code=known_location['country_code'],
+                    flag=known_location['flag'],
+                    region=known_location['region']
                 )
                 locations_synced += 1
             else:
@@ -516,8 +574,8 @@ class CatalogFetcher:
             logger.info(f"Marked {plans_activated} new plans as active")
         
         # Update last sync time for this subsidiary
-        from datetime import datetime
-        await self.db.set_config(f'catalog_last_synced_{self.subsidiary}', datetime.utcnow().isoformat())
+        from datetime import datetime, timezone
+        await self.db.set_config(f'catalog_last_synced_{self.subsidiary}', datetime.now(timezone.utc).isoformat())
         
         summary = {
             "subsidiary": self.subsidiary,
@@ -535,7 +593,7 @@ class CatalogFetcher:
 
     async def should_sync_catalog(self, hours: int = 24) -> bool:
         """Check if catalog should be synced for this subsidiary (default: every 24 hours)."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         last_synced = await self.db.get_config(f'catalog_last_synced_{self.subsidiary}')
         if not last_synced:
@@ -543,6 +601,9 @@ class CatalogFetcher:
         
         try:
             last_dt = datetime.fromisoformat(last_synced)
-            return datetime.utcnow() - last_dt > timedelta(hours=hours)
+            # Ensure timezone-aware comparison
+            if last_dt.tzinfo is None:
+                last_dt = last_dt.replace(tzinfo=timezone.utc)
+            return datetime.now(timezone.utc) - last_dt > timedelta(hours=hours)
         except ValueError:
             return True

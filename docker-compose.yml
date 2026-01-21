@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ovhchecker
-      POSTGRES_PASSWORD: ovhchecker
-      POSTGRES_DB: ovhchecker
+      POSTGRES_USER: ${POSTGRES_USER:-ovhchecker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-ovhchecker}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ovhchecker"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ovhchecker}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -42,9 +42,9 @@ services:
       context: .
       dockerfile: checker/Dockerfile
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
-      CHECK_INTERVAL_SECONDS: "120"
-      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CHECK_INTERVAL_SECONDS: "${CHECK_INTERVAL_SECONDS:-120}"
+      NOTIFICATION_THRESHOLD_MINUTES: "${NOTIFICATION_THRESHOLD_MINUTES:-60}"
       SUBSIDIARY: "US"
       AGENT_ID: "checker-us"
     depends_on:
@@ -57,9 +57,9 @@ services:
       context: .
       dockerfile: checker/Dockerfile
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
-      CHECK_INTERVAL_SECONDS: "120"
-      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CHECK_INTERVAL_SECONDS: "${CHECK_INTERVAL_SECONDS:-120}"
+      NOTIFICATION_THRESHOLD_MINUTES: "${NOTIFICATION_THRESHOLD_MINUTES:-60}"
       SUBSIDIARY: "CA"
       AGENT_ID: "checker-ca"
     depends_on:
@@ -72,9 +72,9 @@ services:
       context: .
       dockerfile: checker/Dockerfile
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
-      CHECK_INTERVAL_SECONDS: "120"
-      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CHECK_INTERVAL_SECONDS: "${CHECK_INTERVAL_SECONDS:-120}"
+      NOTIFICATION_THRESHOLD_MINUTES: "${NOTIFICATION_THRESHOLD_MINUTES:-60}"
       SUBSIDIARY: "FR"
       AGENT_ID: "checker-fr"
     depends_on:
@@ -87,9 +87,9 @@ services:
       context: .
       dockerfile: checker/Dockerfile
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
-      CHECK_INTERVAL_SECONDS: "120"
-      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CHECK_INTERVAL_SECONDS: "${CHECK_INTERVAL_SECONDS:-120}"
+      NOTIFICATION_THRESHOLD_MINUTES: "${NOTIFICATION_THRESHOLD_MINUTES:-60}"
       SUBSIDIARY: "DE"
       AGENT_ID: "checker-de"
     depends_on:
@@ -102,9 +102,9 @@ services:
       context: .
       dockerfile: checker/Dockerfile
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
-      CHECK_INTERVAL_SECONDS: "120"
-      NOTIFICATION_THRESHOLD_MINUTES: "60"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CHECK_INTERVAL_SECONDS: "${CHECK_INTERVAL_SECONDS:-120}"
+      NOTIFICATION_THRESHOLD_MINUTES: "${NOTIFICATION_THRESHOLD_MINUTES:-60}"
       SUBSIDIARY: "GB"
       AGENT_ID: "checker-gb"
     depends_on:
@@ -116,17 +116,20 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+      args:
+        BUILD_SHA: ${BUILD_SHA:-dev}
+        BUILD_DATE: ${BUILD_DATE:-local}
     environment:
-      DATABASE_URL: postgresql://ovhchecker:ovhchecker@postgres:5432/ovhchecker
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       API_HOST: "0.0.0.0"
       API_PORT: "8000"
-      CORS_ORIGINS: "*"
-      # JWT Authentication - CHANGE THIS IN PRODUCTION!
-      JWT_SECRET: "${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}"
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      # JWT Authentication - REQUIRED!
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "${ACCESS_TOKEN_EXPIRE_MINUTES:-30}"
+      REFRESH_TOKEN_EXPIRE_DAYS: "${REFRESH_TOKEN_EXPIRE_DAYS:-7}"
       # Set to "false" to disable public registration
-      ALLOW_REGISTRATION: "true"
+      ALLOW_REGISTRATION: "${ALLOW_REGISTRATION:-true}"
     ports:
       - "8080:8000"
     depends_on:

@@ -3,10 +3,10 @@ Authentication module for OVH Checker API.
 Provides JWT-based authentication with bcrypt password hashing.
 """
 import os
-import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 import hashlib
+import secrets
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,8 +16,14 @@ from passlib.context import CryptContext
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
+# JWT Configuration - JWT_SECRET must be explicitly set
+_jwt_secret_env = os.getenv("JWT_SECRET")
+if not _jwt_secret_env:
+    raise RuntimeError(
+        "JWT_SECRET environment variable is required. "
+        "Generate one with: openssl rand -base64 32"
+    )
+JWT_SECRET = _jwt_secret_env
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
