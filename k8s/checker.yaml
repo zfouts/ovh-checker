@@ -80,7 +80,7 @@ spec:
               mountPath: /tmp
       initContainers:
         - name: wait-for-postgres
-          image: busybox:1.36
+          image: busybox:1.36.1
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -89,6 +89,13 @@ spec:
             capabilities:
               drop:
                 - ALL
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "10m"
+            limits:
+              memory: "32Mi"
+              cpu: "50m"
           command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
       volumes:
         - name: tmp
@@ -171,7 +178,7 @@ spec:
               mountPath: /tmp
       initContainers:
         - name: wait-for-postgres
-          image: busybox:1.36
+          image: busybox:1.36.1
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -180,6 +187,13 @@ spec:
             capabilities:
               drop:
                 - ALL
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "10m"
+            limits:
+              memory: "32Mi"
+              cpu: "50m"
           command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
       volumes:
         - name: tmp
