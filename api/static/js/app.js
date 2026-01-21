@@ -80,6 +80,13 @@ createApp({
         });
         const webhookColorPicker = ref('#3FB950');
         
+        // Password change
+        const showChangePasswordModal = ref(false);
+        const passwordForm = ref({ current_password: '', new_password: '', confirm_password: '' });
+        const passwordError = ref('');
+        const passwordSuccess = ref('');
+        const changingPassword = ref(false);
+        
         // Admin modals and forms
         const showCreateUserModal = ref(false);
         const createUserForm = ref({ email: '', username: '', password: '', is_active: true, is_admin: false });
@@ -353,6 +360,75 @@ createApp({
             userSubscriptions.value = [];
             userNotifications.value = [];
             showToast('Logged out');
+        };
+
+        const changePassword = async () => {
+            passwordError.value = '';
+            passwordSuccess.value = '';
+            
+            // Validate passwords match
+            if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
+                passwordError.value = 'New passwords do not match';
+                return;
+            }
+            
+            // Validate password complexity
+            const pwd = passwordForm.value.new_password;
+            if (pwd.length < 8) {
+                passwordError.value = 'Password must be at least 8 characters';
+                return;
+            }
+            if (!/[a-z]/.test(pwd)) {
+                passwordError.value = 'Password must contain at least one lowercase letter';
+                return;
+            }
+            if (!/[A-Z]/.test(pwd)) {
+                passwordError.value = 'Password must contain at least one uppercase letter';
+                return;
+            }
+            if (!/\d/.test(pwd)) {
+                passwordError.value = 'Password must contain at least one digit';
+                return;
+            }
+            if (!/[@$!%*?&^#()_+\-=\[\]{};:'",.<>\\|`~]/.test(pwd)) {
+                passwordError.value = 'Password must contain at least one special character';
+                return;
+            }
+            
+            changingPassword.value = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/me/password`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
+                    },
+                    body: JSON.stringify({
+                        current_password: passwordForm.value.current_password,
+                        new_password: passwordForm.value.new_password
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    passwordError.value = error.detail || 'Failed to change password';
+                    return;
+                }
+                
+                passwordSuccess.value = 'Password changed successfully. Please login again.';
+                passwordForm.value = { current_password: '', new_password: '', confirm_password: '' };
+                
+                // Log out after successful password change
+                setTimeout(() => {
+                    showChangePasswordModal.value = false;
+                    logout();
+                }, 2000);
+            } catch (e) {
+                passwordError.value = 'Network error. Please try again.';
+            } finally {
+                changingPassword.value = false;
+            }
         };
 
         // User data functions
@@ -1672,6 +1748,9 @@ createApp({
             handleAddWebhook, testUserWebhook, toggleUserWebhook, deleteUserWebhook,
             togglePlanSubscription, selectAllPlans, deselectAllPlans, saveSubscriptions,
             allPlansForSubscription,
+            // Password change
+            showChangePasswordModal, passwordForm, passwordError, passwordSuccess, changingPassword,
+            changePassword,
             // Admin data
             adminUsers, adminGroups, adminLoading, fetchAdminUsers, fetchAdminGroups,
             toggleUserActive, toggleUserAdmin, confirmDeleteUser,

@@ -1278,6 +1278,24 @@
                     </div>
                     
                     <template v-else>
+                        <!-- Account Settings Section -->
+                        <div class="card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <span class="card-title">👤 My Account</span>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-tertiary); border-radius: 8px;">
+                                    <div>
+                                        <div style="font-weight: 500;">{{ currentUser?.email }}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Account Settings</div>
+                                    </div>
+                                    <button class="btn btn-secondary btn-sm" @click="showChangePasswordModal = true">
+                                        🔑 Change Password
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- User Webhooks Section -->
                         <div class="card" style="margin-bottom: 24px;">
                             <div class="card-header">
@@ -1614,6 +1632,46 @@
                     <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" @click="handleAddWebhook" :disabled="addingWebhook">
                         {{ addingWebhook ? 'Adding...' : 'Add Webhook' }}
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password Modal -->
+        <div v-if="showChangePasswordModal" class="modal-overlay" @click.self="showChangePasswordModal = false">
+            <div class="modal" style="max-width: 420px;">
+                <div class="modal-header">
+                    <span class="modal-title">🔑 Change Password</span>
+                    <button class="modal-close" @click="showChangePasswordModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="passwordError" class="alert alert-danger">{{ passwordError }}</div>
+                    <div v-if="passwordSuccess" class="alert alert-success">{{ passwordSuccess }}</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Current Password *</label>
+                        <input type="password" class="form-input" v-model="passwordForm.current_password" 
+                               placeholder="Enter your current password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password *</label>
+                        <input type="password" class="form-input" v-model="passwordForm.new_password" 
+                               placeholder="Enter new password">
+                        <p class="form-hint">
+                            Must be at least 8 characters with uppercase, lowercase, digit, and special character.
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password *</label>
+                        <input type="password" class="form-input" v-model="passwordForm.confirm_password" 
+                               placeholder="Confirm new password">
+                    </div>
+                    
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" @click="changePassword" :disabled="changingPassword">
+                        {{ changingPassword ? 'Changing...' : 'Change Password' }}
+                    </button>
+                    <p class="form-hint" style="text-align: center; margin-top: 12px;">
+                        You will be logged out after changing your password.
+                    </p>
                 </div>
             </div>
         </div>
