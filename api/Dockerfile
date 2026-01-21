@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
 
@@ -10,9 +10,17 @@ ARG BUILD_DATE=unknown
 ENV BUILD_SHA=${BUILD_SHA}
 ENV BUILD_DATE=${BUILD_DATE}
 
+# Install build dependencies for Python packages
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
+    && apk add --no-cache libpq
+
 # Install dependencies
 COPY api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && apk del .build-deps
+
+# Create non-root user
+RUN adduser -D -u 1000 appuser
 
 # Copy shared module
 COPY shared/ /app/shared/
@@ -27,6 +35,10 @@ COPY api/static/ static/
 RUN SHORT_SHA=$(echo "${BUILD_SHA}" | cut -c1-7) && \
     sed -i "s/__BUILD_SHA__/${SHORT_SHA}/g" static/index.html && \
     sed -i "s/__BUILD_DATE__/${BUILD_DATE}/g" static/index.html
+
+# Set ownership and switch to non-root user
+RUN chown -R appuser:appuser /app
+USER appuser
 
 # Expose port
 EXPOSE 8000
