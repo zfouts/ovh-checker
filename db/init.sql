@@ -287,8 +287,8 @@ CREATE INDEX IF NOT EXISTS idx_inventory_status_plan_code ON inventory_status(pl
 CREATE INDEX IF NOT EXISTS idx_inventory_status_checked_at ON inventory_status(checked_at);
 CREATE INDEX IF NOT EXISTS idx_out_of_stock_tracking_plan_dc ON out_of_stock_tracking(plan_code, datacenter);
 
--- Insert default config values
-INSERT INTO config (key, value) VALUES ('discord_webhook_url', 'https://discord.com/api/webhooks/1462666317479018690/r7QwMv3gFFi67KeBXH9H8GUapSNCXWTt9FSiNx5Lg2k8bZnwAfuRBsd-9kq0nLR1Yhtt') ON CONFLICT (key) DO NOTHING;
+-- Insert default config values (no webhook URL by default - must be configured)
+INSERT INTO config (key, value) VALUES ('discord_webhook_url', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('notification_threshold_minutes', '60') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('check_interval_seconds', '120') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('pricing_last_updated', '') ON CONFLICT (key) DO NOTHING;
