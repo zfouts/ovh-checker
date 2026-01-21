@@ -1367,7 +1367,7 @@ createApp({
             const [path, queryString] = hash.split('?');
             const tab = path.replace('/', '') || 'status';
             
-            activeTab.value = ['status', 'compare', 'datacenter', 'history', 'notifications', 'settings', 'my-alerts', 'admin'].includes(tab) ? tab : 'status';
+            activeTab.value = ['status', 'compare', 'datacenter', 'history', 'notifications', 'settings', 'my-alerts', 'admin', 'profile'].includes(tab) ? tab : 'status';
             
             // Fetch comparison data when switching to compare tab
             if (tab === 'compare' && !compareData.value) {

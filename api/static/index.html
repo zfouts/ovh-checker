@@ -48,7 +48,7 @@
                     <!-- Auth buttons -->
                     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
                         <template v-if="isAuthenticated">
-                            <span style="color: var(--text-secondary); font-size: 0.875rem;">{{ currentUser?.email }}</span>
+                            <a href="#/profile" style="color: var(--text-secondary); font-size: 0.875rem; text-decoration: none; cursor: pointer;" title="My Profile">👤 {{ currentUser?.email }}</a>
                             <button class="btn btn-ghost btn-sm" @click="logout">Logout</button>
                         </template>
                         <template v-else>
@@ -1278,24 +1278,6 @@
                     </div>
                     
                     <template v-else>
-                        <!-- Account Settings Section -->
-                        <div class="card" style="margin-bottom: 24px;">
-                            <div class="card-header">
-                                <span class="card-title">👤 My Account</span>
-                            </div>
-                            <div class="card-body">
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-tertiary); border-radius: 8px;">
-                                    <div>
-                                        <div style="font-weight: 500;">{{ currentUser?.email }}</div>
-                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Account Settings</div>
-                                    </div>
-                                    <button class="btn btn-secondary btn-sm" @click="showChangePasswordModal = true">
-                                        🔑 Change Password
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- User Webhooks Section -->
                         <div class="card" style="margin-bottom: 24px;">
                             <div class="card-header">
@@ -1410,6 +1392,50 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Profile Tab -->
+                <div v-if="activeTab === 'profile'">
+                    <div v-if="!isAuthenticated" class="empty-state card">
+                        <h3>👤 My Profile</h3>
+                        <p>Sign in to view your profile and account settings.</p>
+                        <button class="btn btn-primary" @click="showLoginModal = true" style="margin-top: 16px;">
+                            Login to Continue
+                        </button>
+                    </div>
+                    
+                    <template v-else>
+                        <div class="card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <span class="card-title">👤 My Profile</span>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="padding: 16px; background: var(--bg-tertiary); border-radius: 8px;">
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Email</div>
+                                        <div style="font-weight: 500;">{{ currentUser?.email }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">🔐 Security</span>
+                            </div>
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg-tertiary); border-radius: 8px;">
+                                    <div>
+                                        <div style="font-weight: 500;">Password</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Change your account password</div>
+                                    </div>
+                                    <button class="btn btn-secondary" @click="showChangePasswordModal = true">
+                                        🔑 Change Password
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </template>
