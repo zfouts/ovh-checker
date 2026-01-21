@@ -6,7 +6,6 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 import hashlib
-import hmac
 import secrets
 
 from fastapi import Depends, HTTPException, status, Request
@@ -63,8 +62,8 @@ def create_refresh_token(user_id: int) -> Tuple[str, str, datetime]:
     Returns: (token, token_hash, expires_at)
     """
     token = secrets.token_urlsafe(64)
-    # Use HMAC-SHA384 with JWT_SECRET for secure token hashing
-    token_hash = hmac.new(JWT_SECRET.encode(), token.encode(), hashlib.sha384).hexdigest()
+    # Use BLAKE2b with key for secure token hashing (faster and more secure than SHA)
+    token_hash = hashlib.blake2b(token.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
     expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return token, token_hash, expires_at
 
@@ -81,8 +80,8 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def hash_refresh_token(token: str) -> str:
-    """Hash a refresh token for storage using HMAC-SHA384."""
-    return hmac.new(JWT_SECRET.encode(), token.encode(), hashlib.sha384).hexdigest()
+    """Hash a refresh token for storage using BLAKE2b."""
+    return hashlib.blake2b(token.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
 
 
 class AuthenticatedUser:
@@ -156,8 +155,8 @@ def generate_api_key() -> Tuple[str, str]:
     Returns: (api_key, key_hash)
     """
     api_key = f"ovh_{secrets.token_urlsafe(32)}"
-    # Use HMAC-SHA384 with JWT_SECRET for secure API key hashing
-    key_hash = hmac.new(JWT_SECRET.encode(), api_key.encode(), hashlib.sha384).hexdigest()
+    # Use BLAKE2b with key for secure API key hashing
+    key_hash = hashlib.blake2b(api_key.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
     return api_key, key_hash
 
 
@@ -173,8 +172,8 @@ async def get_user_from_api_key(
     if not api_key:
         return None
     
-    # Use HMAC-SHA384 for secure comparison
-    key_hash = hmac.new(JWT_SECRET.encode(), api_key.encode(), hashlib.sha384).hexdigest()
+    # Use BLAKE2b for secure comparison
+    key_hash = hashlib.blake2b(api_key.encode(), key=JWT_SECRET.encode()[:64], digest_size=32).hexdigest()
     user = await db.get_user_by_api_key(key_hash)
     
     if user:

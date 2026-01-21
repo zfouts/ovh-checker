@@ -88,11 +88,13 @@ async def bootstrap_admin_user():
         logger.info(f"Email: {admin_email}")
         logger.info(f"Username: {admin_username}")
         if password_was_generated:
-            # Print to stdout for initial setup only - not logged to persistent logs
-            print(f"\n{'=' * 60}")
-            print(f"ADMIN PASSWORD (save this, it won't be shown again): {password}")
-            print(f"{'=' * 60}\n")
-            logger.info("Password: [auto-generated, printed to stdout]")
+            # Write password to stderr (typically not persisted) using sys.stderr
+            import sys
+            sys.stderr.write(f"\n{'=' * 60}\n")
+            sys.stderr.write(f"ADMIN PASSWORD (save this now): {password}\n")  # nosec B105
+            sys.stderr.write(f"{'=' * 60}\n\n")
+            sys.stderr.flush()
+            logger.info("Password: [auto-generated, check container stderr]")
         else:
             logger.info("Password: [set via ADMIN_INITIAL_PASSWORD env var]")
         logger.info("=" * 60)
