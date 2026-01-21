@@ -6,6 +6,9 @@ WORKDIR /app
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
     && apk add --no-cache libpq
 
+# Upgrade pip to fix CVE-2025-8869
+RUN pip install --no-cache-dir --upgrade pip>=25.3
+
 # Install dependencies
 COPY checker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
