@@ -103,6 +103,11 @@ class OVHChecker:
                     region=loc['region']
                 )
 
+            # Get last known status BEFORE saving the new one
+            # (otherwise we'd compare the new status to itself)
+            last_status = await self.db.get_last_status(plan_code, datacenter, self.subsidiary)
+            was_available = last_status["is_available"] if last_status else None
+
             # Save current status with subsidiary
             await self.db.save_inventory_status(
                 plan_code,
@@ -113,10 +118,6 @@ class OVHChecker:
                 linux_status,
                 data
             )
-
-            # Get last known status
-            last_status = await self.db.get_last_status(plan_code, datacenter, self.subsidiary)
-            was_available = last_status["is_available"] if last_status else None
 
             if is_available:
                 # Item is in stock now
