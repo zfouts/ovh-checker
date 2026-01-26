@@ -117,8 +117,8 @@ async def send_out_of_stock_notifications_to_all(
 ) -> Dict[str, Any]:
     """
     Send out-of-stock notifications to:
-    1. Default system webhook (if configured)
-    2. All users subscribed to this plan (supports both Discord and Slack)
+    1. Default system webhook (if configured AND subsidiary is in monitored list)
+    2. All users subscribed to this plan (regardless of subsidiary)
     
     Returns a summary of notification results.
     """
@@ -127,21 +127,27 @@ async def send_out_of_stock_notifications_to_all(
         "user_webhooks": []
     }
     
-    # 1. Send to default system webhook (Discord)
-    default_webhook_url = await db.get_config("discord_webhook_url")
-    if default_webhook_url:
-        success, error = await send_out_of_stock_notification(
-            default_webhook_url,
-            plan_code,
-            datacenter,
-            in_stock_minutes,
-            plan_info=plan_info,
-            subsidiary=subsidiary,
-            webhook_type='discord'
-        )
-        results["default_webhook"] = {"sent": True, "success": success, "error": error}
+    # Check if this subsidiary should receive default webhook alerts
+    monitored_subsidiaries_str = await db.get_config("monitored_subsidiaries") or "US"
+    monitored_subsidiaries = [s.strip().upper() for s in monitored_subsidiaries_str.split(',')]
+    send_default_alerts = subsidiary.upper() in monitored_subsidiaries
     
-    # 2. Send to all subscribed users
+    # 1. Send to default system webhook (Discord) - only if subsidiary is monitored
+    if send_default_alerts:
+        default_webhook_url = await db.get_config("discord_webhook_url")
+        if default_webhook_url:
+            success, error = await send_out_of_stock_notification(
+                default_webhook_url,
+                plan_code,
+                datacenter,
+                in_stock_minutes,
+                plan_info=plan_info,
+                subsidiary=subsidiary,
+                webhook_type='discord'
+            )
+            results["default_webhook"] = {"sent": True, "success": success, "error": error}
+    
+    # 2. Send to all subscribed users (regardless of subsidiary)
     subscribed_users = await db.get_subscribed_users_for_plan(plan_code, subsidiary)
     
     for user in subscribed_users:
@@ -189,8 +195,8 @@ async def send_notifications_to_all(
 ) -> Dict[str, Any]:
     """
     Send notifications to:
-    1. Default system webhook (if configured)
-    2. All users subscribed to this plan (supports both Discord and Slack)
+    1. Default system webhook (if configured AND subsidiary is in monitored list)
+    2. All users subscribed to this plan (regardless of subsidiary)
     
     Returns a summary of notification results.
     """
@@ -199,62 +205,68 @@ async def send_notifications_to_all(
         "user_webhooks": []
     }
     
-    # 1. Send to default system webhook (Discord)
-    default_webhook_url = await db.get_config("discord_webhook_url")
-    if default_webhook_url:
-        success, error = await send_discord_notification(
-            default_webhook_url,
-            plan_code,
-            datacenter,
-            out_of_stock_minutes,
-            plan_info=plan_info,
-            subsidiary=subsidiary,
-            webhook_type='discord'
-        )
-        results["default_webhook"] = {"sent": True, "success": success, "error": error}
-        
-        # Save to notification history (system notification)
-        await db.save_notification(
-            plan_code,
-            datacenter,
-            f"Back in stock after {out_of_stock_minutes} minutes (default webhook)",
-            success,
-            error,
-            subsidiary=subsidiary
-        )
-        
-        # Also save to user_notification_history as default
-        await db.save_user_notification(
-            plan_code=plan_code,
-            datacenter=datacenter,
-            message=f"Back in stock after {out_of_stock_minutes} minutes",
-            success=success,
-            error_message=error,
-            is_default_webhook=True
-        )
+    # Check if this subsidiary should receive default webhook alerts
+    monitored_subsidiaries_str = await db.get_config("monitored_subsidiaries") or "US"
+    monitored_subsidiaries = [s.strip().upper() for s in monitored_subsidiaries_str.split(',')]
+    send_default_alerts = subsidiary.upper() in monitored_subsidiaries
     
-    # 2. Check for default Slack webhook as well
-    default_slack_url = await db.get_config("slack_webhook_url")
-    if default_slack_url:
-        success, error = await send_discord_notification(
-            default_slack_url,
-            plan_code,
-            datacenter,
-            out_of_stock_minutes,
-            plan_info=plan_info,
-            subsidiary=subsidiary,
-            webhook_type='slack'
-        )
-        
-        # Save to notification history
-        await db.save_user_notification(
-            plan_code=plan_code,
-            datacenter=datacenter,
-            message=f"Back in stock after {out_of_stock_minutes} minutes (Slack)",
-            success=success,
-            error_message=error,
-            is_default_webhook=True
-        )
+    # 1. Send to default system webhook (Discord) - only if subsidiary is monitored
+    if send_default_alerts:
+        default_webhook_url = await db.get_config("discord_webhook_url")
+        if default_webhook_url:
+            success, error = await send_discord_notification(
+                default_webhook_url,
+                plan_code,
+                datacenter,
+                out_of_stock_minutes,
+                plan_info=plan_info,
+                subsidiary=subsidiary,
+                webhook_type='discord'
+            )
+            results["default_webhook"] = {"sent": True, "success": success, "error": error}
+            
+            # Save to notification history (system notification)
+            await db.save_notification(
+                plan_code,
+                datacenter,
+                f"Back in stock after {out_of_stock_minutes} minutes (default webhook)",
+                success,
+                error,
+                subsidiary=subsidiary
+            )
+            
+            # Also save to user_notification_history as default
+            await db.save_user_notification(
+                plan_code=plan_code,
+                datacenter=datacenter,
+                message=f"Back in stock after {out_of_stock_minutes} minutes",
+                success=success,
+                error_message=error,
+                is_default_webhook=True
+            )
+    
+        # 2. Check for default Slack webhook as well
+        default_slack_url = await db.get_config("slack_webhook_url")
+        if default_slack_url:
+            success, error = await send_discord_notification(
+                default_slack_url,
+                plan_code,
+                datacenter,
+                out_of_stock_minutes,
+                plan_info=plan_info,
+                subsidiary=subsidiary,
+                webhook_type='slack'
+            )
+            
+            # Save to notification history
+            await db.save_user_notification(
+                plan_code=plan_code,
+                datacenter=datacenter,
+                message=f"Back in stock after {out_of_stock_minutes} minutes (Slack)",
+                success=success,
+                error_message=error,
+                is_default_webhook=True
+            )
     
     # 3. Send to all users subscribed to this plan in this subsidiary
     subscribed_users = await db.get_users_subscribed_to_plan(plan_code, subsidiary)
