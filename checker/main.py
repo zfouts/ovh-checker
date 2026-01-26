@@ -6,7 +6,7 @@ import sys
 from typing import Dict, Any, List, Optional
 
 from database import Database
-from discord_notifier import send_discord_notification, send_notifications_to_all
+from discord_notifier import send_discord_notification, send_notifications_to_all, send_out_of_stock_notifications_to_all
 from pricing_fetcher import PricingFetcher
 from catalog_fetcher import get_datacenter_location
 from config import settings
@@ -160,7 +160,41 @@ class OVHChecker:
                     elif out_of_stock_minutes:
                         logger.info(f"[{self.subsidiary}] INFO: {plan_code}/{datacenter} back after {out_of_stock_minutes} min (below threshold)")
             else:
-                # Item is out of stock
+                # Item is out of stock now
+                if was_available is True:
+                    # It was in stock, now it's gone!
+                    in_stock_minutes = await self.db.get_in_stock_duration(plan_code, datacenter, self.subsidiary)
+                    
+                    # Get notification threshold from database
+                    notification_threshold = await get_notification_threshold(self.db)
+                    
+                    if in_stock_minutes and in_stock_minutes >= notification_threshold:
+                        # Send out-of-stock notifications
+                        plan_info = await self.db.get_plan_info(plan_code, self.subsidiary)
+                        
+                        results = await send_out_of_stock_notifications_to_all(
+                            self.db,
+                            plan_code,
+                            datacenter,
+                            in_stock_minutes,
+                            plan_info=plan_info,
+                            subsidiary=self.subsidiary
+                        )
+                        
+                        # Log results
+                        default_result = results["default_webhook"]
+                        user_count = len(results["user_webhooks"])
+                        user_success = sum(1 for u in results["user_webhooks"] if u["success"])
+                        
+                        logger.info(
+                            f"[{self.subsidiary}] NOTIFY: {plan_code}/{datacenter} out of stock after {in_stock_minutes} min. "
+                            f"Default: {'OK' if default_result['success'] else 'FAIL'}, "
+                            f"Users: {user_success}/{user_count} succeeded"
+                        )
+                    elif in_stock_minutes:
+                        logger.info(f"[{self.subsidiary}] INFO: {plan_code}/{datacenter} out of stock after {in_stock_minutes} min (below threshold)")
+                
+                # Track the out of stock event
                 await self.db.track_out_of_stock(plan_code, datacenter, self.subsidiary)
 
     async def run_check_cycle(self):

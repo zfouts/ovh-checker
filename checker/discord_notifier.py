@@ -63,6 +63,122 @@ async def send_discord_notification(
     return success, error
 
 
+async def send_out_of_stock_notification(
+    webhook_url: str,
+    plan_code: str,
+    datacenter: str,
+    in_stock_minutes: int,
+    plan_info: Optional[Dict[str, Any]] = None,
+    user_info: Optional[Dict[str, Any]] = None,
+    subsidiary: str = 'US',
+    webhook_type: str = 'discord'
+) -> Tuple[bool, Optional[str]]:
+    """Send an out-of-stock webhook notification (Discord or Slack)."""
+    if not webhook_url:
+        return False, "Webhook URL not configured"
+
+    # Auto-detect webhook type if not specified
+    if not webhook_type:
+        webhook_type = WebhookNotifier.detect_webhook_type(webhook_url)
+    
+    # Prepare notification parameters
+    kwargs = {}
+    if user_info:
+        kwargs['bot_username'] = user_info.get('bot_username')
+        kwargs['webhook_name'] = user_info.get('webhook_name', 'Personal Alert')
+        kwargs['mention_role_id'] = user_info.get('mention_role_id')
+        kwargs['embed_color'] = user_info.get('embed_color')
+        kwargs['slack_channel'] = user_info.get('slack_channel')
+    
+    success, error = await WebhookNotifier.send_out_of_stock_notification(
+        webhook_url=webhook_url,
+        webhook_type=webhook_type,
+        plan_code=plan_code,
+        datacenter=datacenter,
+        in_stock_minutes=in_stock_minutes,
+        plan_info=plan_info,
+        subsidiary=subsidiary,
+        **kwargs
+    )
+    
+    if success:
+        logger.info(f"[{subsidiary}] {webhook_type.capitalize()} out-of-stock notification sent for {plan_code}/{datacenter}")
+    
+    return success, error
+
+
+async def send_out_of_stock_notifications_to_all(
+    db,
+    plan_code: str,
+    datacenter: str,
+    in_stock_minutes: int,
+    plan_info: Optional[Dict[str, Any]] = None,
+    subsidiary: str = 'US'
+) -> Dict[str, Any]:
+    """
+    Send out-of-stock notifications to:
+    1. Default system webhook (if configured)
+    2. All users subscribed to this plan (supports both Discord and Slack)
+    
+    Returns a summary of notification results.
+    """
+    results = {
+        "default_webhook": {"sent": False, "success": False, "error": None},
+        "user_webhooks": []
+    }
+    
+    # 1. Send to default system webhook (Discord)
+    default_webhook_url = await db.get_config("discord_webhook_url")
+    if default_webhook_url:
+        success, error = await send_out_of_stock_notification(
+            default_webhook_url,
+            plan_code,
+            datacenter,
+            in_stock_minutes,
+            plan_info=plan_info,
+            subsidiary=subsidiary,
+            webhook_type='discord'
+        )
+        results["default_webhook"] = {"sent": True, "success": success, "error": error}
+    
+    # 2. Send to all subscribed users
+    subscribed_users = await db.get_subscribed_users_for_plan(plan_code, subsidiary)
+    
+    for user in subscribed_users:
+        webhook_url = user.get("discord_webhook_url") or user.get("slack_webhook_url")
+        if not webhook_url:
+            continue
+        
+        webhook_type = 'slack' if user.get("slack_webhook_url") else 'discord'
+        user_info = {
+            "bot_username": user.get("bot_username"),
+            "webhook_name": user.get("webhook_name"),
+            "mention_role_id": user.get("mention_role_id"),
+            "embed_color": user.get("embed_color"),
+            "slack_channel": user.get("slack_channel"),
+        }
+        
+        success, error = await send_out_of_stock_notification(
+            webhook_url,
+            plan_code,
+            datacenter,
+            in_stock_minutes,
+            plan_info=plan_info,
+            user_info=user_info,
+            subsidiary=subsidiary,
+            webhook_type=webhook_type
+        )
+        
+        results["user_webhooks"].append({
+            "user_id": user.get("user_id"),
+            "webhook_type": webhook_type,
+            "success": success,
+            "error": error
+        })
+    
+    return results
+
+
 async def send_notifications_to_all(
     db,
     plan_code: str,

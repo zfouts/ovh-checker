@@ -142,6 +142,33 @@ class WebhookNotifier:
         else:
             return False, f"Unknown webhook type: {webhook_type}"
 
+    @staticmethod
+    async def send_out_of_stock_notification(
+        webhook_url: str,
+        webhook_type: str,
+        plan_code: str,
+        datacenter: str,
+        in_stock_minutes: int,
+        plan_info: Optional[Dict[str, Any]] = None,
+        subsidiary: str = 'US',
+        bot_username: str = None,
+        webhook_name: str = None,
+        **kwargs
+    ) -> Tuple[bool, Optional[str]]:
+        """Send an out-of-stock notification."""
+        if webhook_type == 'discord':
+            return await WebhookNotifier._send_discord_out_of_stock(
+                webhook_url, plan_code, datacenter, in_stock_minutes,
+                plan_info, subsidiary, bot_username, webhook_name, **kwargs
+            )
+        elif webhook_type == 'slack':
+            return await WebhookNotifier._send_slack_out_of_stock(
+                webhook_url, plan_code, datacenter, in_stock_minutes,
+                plan_info, subsidiary, bot_username, webhook_name, **kwargs
+            )
+        else:
+            return False, f"Unknown webhook type: {webhook_type}"
+
     # ========== Discord Implementation ==========
     
     @staticmethod
@@ -207,6 +234,61 @@ class WebhookNotifier:
                 {"name": "Price", "value": price, "inline": True},
                 {"name": "Out of Stock Duration", "value": f"{out_of_stock_minutes} minutes", "inline": True},
                 {"name": "Order Now", "value": f"[Click here to order]({purchase_url})", "inline": False}
+            ],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "footer": {"text": f"OVH Inventory Checker • {webhook_name or subsidiary_name}"}
+        }
+
+        content = None
+        if mention_role_id:
+            content = f"<@&{mention_role_id}>"
+
+        payload = {
+            "username": bot_username or "OVH Stock Alert",
+            "embeds": [embed]
+        }
+        if content:
+            payload["content"] = content
+
+        return await WebhookNotifier._post_webhook(webhook_url, payload, "Discord")
+
+    @staticmethod
+    async def _send_discord_out_of_stock(
+        webhook_url: str,
+        plan_code: str,
+        datacenter: str,
+        in_stock_minutes: int,
+        plan_info: Optional[Dict[str, Any]] = None,
+        subsidiary: str = 'US',
+        bot_username: str = None,
+        webhook_name: str = None,
+        mention_role_id: str = None,
+        embed_color: str = None,
+        **kwargs
+    ) -> Tuple[bool, Optional[str]]:
+        """Send a Discord out-of-stock notification."""
+        from catalog_fetcher import get_subsidiary_name
+        
+        display_name = plan_info.get("display_name", plan_code) if plan_info else plan_code
+        subsidiary_name = get_subsidiary_name(subsidiary)
+        
+        # Use red/orange color for out of stock
+        color = 15158332  # Default red
+        if embed_color:
+            try:
+                color = int(embed_color.lstrip('#'), 16)
+            except ValueError:
+                pass
+        
+        embed = {
+            "title": f"🔴 VPS Out of Stock ({subsidiary})",
+            "description": f"**{display_name}** is no longer available in {subsidiary_name}.",
+            "color": color,
+            "fields": [
+                {"name": "Plan", "value": plan_code, "inline": True},
+                {"name": "Datacenter", "value": datacenter, "inline": True},
+                {"name": "Region", "value": subsidiary_name, "inline": True},
+                {"name": "Was In Stock For", "value": f"{in_stock_minutes} minutes", "inline": True},
             ],
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "footer": {"text": f"OVH Inventory Checker • {webhook_name or subsidiary_name}"}
@@ -361,6 +443,72 @@ class WebhookNotifier:
         payload = {
             "blocks": blocks,
             "text": f"🟢 {display_name} is back in stock in {subsidiary_name}!"  # Fallback
+        }
+        if bot_username:
+            payload["username"] = bot_username
+        if slack_channel:
+            payload["channel"] = slack_channel
+
+        return await WebhookNotifier._post_webhook(webhook_url, payload, "Slack")
+
+    @staticmethod
+    async def _send_slack_out_of_stock(
+        webhook_url: str,
+        plan_code: str,
+        datacenter: str,
+        in_stock_minutes: int,
+        plan_info: Optional[Dict[str, Any]] = None,
+        subsidiary: str = 'US',
+        bot_username: str = None,
+        webhook_name: str = None,
+        slack_channel: str = None,
+        **kwargs
+    ) -> Tuple[bool, Optional[str]]:
+        """Send a Slack out-of-stock notification."""
+        from catalog_fetcher import get_subsidiary_name
+        
+        display_name = plan_info.get("display_name", plan_code) if plan_info else plan_code
+        subsidiary_name = get_subsidiary_name(subsidiary)
+        
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🔴 VPS Out of Stock ({subsidiary})",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{display_name}* is no longer available in {subsidiary_name}."
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Plan:*\n{plan_code}"},
+                    {"type": "mrkdwn", "text": f"*Datacenter:*\n{datacenter}"},
+                    {"type": "mrkdwn", "text": f"*Region:*\n{subsidiary_name}"},
+                    {"type": "mrkdwn", "text": f"*Was In Stock For:*\n{in_stock_minutes} minutes"},
+                ]
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"OVH Inventory Checker • {webhook_name or subsidiary_name} • <!date^{int(datetime.now(timezone.utc).timestamp())}^{{date_short_pretty}} at {{time}}|{datetime.now(timezone.utc).isoformat()}>"
+                    }
+                ]
+            }
+        ]
+
+        payload = {
+            "blocks": blocks,
+            "text": f"🔴 {display_name} is out of stock in {subsidiary_name}!"  # Fallback
         }
         if bot_username:
             payload["username"] = bot_username

@@ -481,6 +481,27 @@ class Database:
             
             return minutes
 
+    async def get_in_stock_duration(self, plan_code: str, datacenter: str, subsidiary: str = 'US') -> Optional[int]:
+        """Get how long an item has been in stock (since last return) in minutes."""
+        async with self._session() as session:
+            # Find the most recent returned_to_stock_at timestamp
+            result = await session.execute(
+                select(
+                    (func.extract('epoch', func.now() - OutOfStockTracking.returned_to_stock_at) / 60)
+                    .label('minutes')
+                )
+                .where(and_(
+                    OutOfStockTracking.plan_code == plan_code,
+                    OutOfStockTracking.datacenter == datacenter,
+                    OutOfStockTracking.subsidiary == subsidiary,
+                    OutOfStockTracking.returned_to_stock_at.isnot(None)
+                ))
+                .order_by(OutOfStockTracking.returned_to_stock_at.desc())
+                .limit(1)
+            )
+            row = result.first()
+            return int(row.minutes) if row and row.minutes else None
+
     # ============ Notifications ============
 
     async def save_notification(
