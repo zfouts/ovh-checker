@@ -269,6 +269,8 @@ class Database:
                     MonitoredPlan.display_name,
                     MonitoredPlan.url,
                     MonitoredPlan.purchase_url,
+                    MonitoredPlan.is_orderable,
+                    MonitoredPlan.product_line,
                     PlanPricing.price_microcents,
                     PlanPricing.commitment_months,
                     PlanPricing.currency

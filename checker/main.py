@@ -138,6 +138,11 @@ class OVHChecker:
                         # Send notifications to default webhook AND all subscribed users
                         plan_info = await self.db.get_plan_info(plan_code, self.subsidiary)
                         
+                        # Skip notifications for legacy/non-orderable plans (they're only tracked for historical purposes)
+                        if plan_info and not plan_info.get('is_orderable', True):
+                            logger.info(f"[{self.subsidiary}] SKIP: {plan_code}/{datacenter} is not orderable (legacy plan), skipping notification")
+                            continue
+                        
                         results = await send_notifications_to_all(
                             self.db,
                             plan_code,
@@ -171,6 +176,11 @@ class OVHChecker:
                     if in_stock_minutes and in_stock_minutes >= notification_threshold:
                         # Send out-of-stock notifications
                         plan_info = await self.db.get_plan_info(plan_code, self.subsidiary)
+                        
+                        # Skip notifications for legacy/non-orderable plans (they're only tracked for historical purposes)
+                        if plan_info and not plan_info.get('is_orderable', True):
+                            logger.info(f"[{self.subsidiary}] SKIP: {plan_code}/{datacenter} is not orderable (legacy plan), skipping out-of-stock notification")
+                            continue
                         
                         results = await send_out_of_stock_notifications_to_all(
                             self.db,
