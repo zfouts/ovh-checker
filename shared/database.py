@@ -128,14 +128,48 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Initialize database tables.
+    Initialize database tables and seed default config values.
     
-    This creates all tables defined in the models if they don't exist.
-    Use this for development/testing - in production, use migrations.
+    This creates all tables defined in the models if they don't exist,
+    then seeds default configuration values.
     """
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Seed default config values
+    await seed_default_config()
+
+
+async def seed_default_config() -> None:
+    """
+    Seed default configuration values if they don't exist.
+    
+    This ensures the config table has sensible defaults for new deployments.
+    """
+    from sqlalchemy import text
+    
+    defaults = [
+        ('discord_webhook_url', ''),
+        ('notification_threshold_minutes', '60'),
+        ('check_interval_seconds', '120'),
+        ('pricing_last_updated', ''),
+        ('catalog_last_synced', ''),
+        ('monitored_subsidiaries', 'US,CA,FR,DE,GB'),
+        ('allow_registration', 'true'),
+    ]
+    
+    engine = get_engine()
+    async with engine.begin() as conn:
+        for key, value in defaults:
+            await conn.execute(
+                text("""
+                    INSERT INTO config (key, value, updated_at) 
+                    VALUES (:key, :value, NOW()) 
+                    ON CONFLICT (key) DO NOTHING
+                """),
+                {"key": key, "value": value}
+            )
 
 
 async def close_db() -> None:

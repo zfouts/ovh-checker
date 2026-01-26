@@ -31,6 +31,16 @@ spec:
                 operator: NotIn
                 values:
                 - "true"
+      initContainers:
+        - name: fix-permissions
+          image: busybox
+          command: ['sh', '-c', 'mkdir -p /var/lib/postgresql/data/pgdata && chown -R 70:70 /var/lib/postgresql/data']
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -70,8 +80,6 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            - name: init-script
-              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command:
@@ -93,9 +101,6 @@ spec:
           hostPath:
             path: /data/ovh-checker-postgres
             type: DirectoryOrCreate
-        - name: init-script
-          configMap:
-            name: postgres-init
 ---
 apiVersion: v1
 kind: Service

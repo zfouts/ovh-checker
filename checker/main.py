@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
 import logging
+import os
+import sys
 from typing import Dict, Any, List, Optional
 
 from database import Database
@@ -8,6 +10,10 @@ from discord_notifier import send_discord_notification, send_notifications_to_al
 from pricing_fetcher import PricingFetcher
 from catalog_fetcher import get_datacenter_location
 from config import settings
+
+# Import shared init_db for schema initialization
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shared.database import init_db as init_schema
 
 logging.basicConfig(
     level=logging.INFO,
@@ -291,6 +297,11 @@ async def main():
         mode = "Multi-Subsidiary Mode (all regions)"
     
     logger.info(f"Starting OVH Inventory Checker - {mode}")
+    
+    # Initialize database schema (creates tables if they don't exist)
+    logger.info("Initializing database schema...")
+    await init_schema()
+    logger.info("Database schema initialized")
     
     db = Database(settings.database_url)
     await db.connect()

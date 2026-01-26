@@ -7,10 +7,12 @@ namespace: ovh-checker
 # and populate with real values before deployment:
 #   cp secrets.yaml.example secrets.yaml
 #   # Edit secrets.yaml with secure values
+#
+# Database schema is initialized automatically by the API and checker
+# applications using SQLAlchemy at startup - no init.sql required.
 resources:
   - namespace.yaml
   # - secrets.yaml  # Create from secrets.yaml.example with real values
-  - configmap.yaml
   - postgres.yaml
   - checker.yaml
   - api.yaml

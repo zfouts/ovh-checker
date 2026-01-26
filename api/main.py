@@ -22,6 +22,11 @@ from config import settings
 from db_instance import db  # Shared database instance
 from auth import hash_password
 
+# Import shared init_db for schema initialization
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shared.database import init_db as init_schema
+
 # Import routers
 from routers import auth, users, admin, plans, compare
 
@@ -109,6 +114,12 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting OVH Checker API...")
     await db.connect()
+    
+    # Initialize database schema (creates tables if they don't exist)
+    logger.info("Initializing database schema...")
+    await init_schema()
+    logger.info("Database schema initialized")
+    
     await bootstrap_admin_user()
     yield
     # Shutdown
