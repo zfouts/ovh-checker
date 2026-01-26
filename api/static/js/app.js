@@ -51,6 +51,7 @@ createApp({
         const isRefreshing = ref(false);
         const saving = ref(false);
         const testing = ref(false);
+        const deleting = ref(false);
         
         // Auth state
         const isAuthenticated = ref(false);
@@ -1632,6 +1633,30 @@ createApp({
             }
         };
 
+        const deleteWebhook = async () => {
+            if (!confirm('Are you sure you want to delete the default webhook?')) {
+                return;
+            }
+            try {
+                deleting.value = true;
+                const response = await fetch(`${API_BASE}/api/config/discord-webhook`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (response.ok) {
+                    showAlert('Webhook deleted!', 'success');
+                    await fetchConfig();
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Failed to delete', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                deleting.value = false;
+            }
+        };
+
         const togglePlanEnabled = async (plan) => {
             try {
                 const response = await fetch(`${API_BASE}/api/plans/${encodeURIComponent(plan.plan_code)}`, {
@@ -1735,7 +1760,7 @@ createApp({
             getSubsidiaryFlag, getSubsidiaryName, getSubsidiaryCount, setActiveSubsidiary,
             // Comparison feature
             compareData, compareFilters, filteredCompareData, showDcBreakdown, fetchCompareData,
-            formatDate, formatDuration, formatBasePlanName, saveWebhook, testWebhook, togglePlanEnabled,
+            formatDate, formatDuration, formatBasePlanName, saveWebhook, testWebhook, deleteWebhook, deleting, togglePlanEnabled,
             showPricing, updateUrl, copyPermalink, clearFilters, filterByDatacenter, 
             togglePlanCollapse, toggleGroupCollapse, toggleCollapseAll, selectDatacenter, fetchHistory, showAlert,
             // Auth

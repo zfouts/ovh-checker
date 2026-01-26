@@ -1216,6 +1216,9 @@
                                 <button class="btn btn-secondary" @click="testWebhook" :disabled="testing">
                                     {{ testing ? 'Testing...' : 'Test Webhook' }}
                                 </button>
+                                <button class="btn btn-danger" @click="deleteWebhook" :disabled="deleting" v-if="config.discord_webhook_url_masked">
+                                    {{ deleting ? 'Deleting...' : 'Delete Webhook' }}
+                                </button>
                             </div>
                         </div>
                     </div>

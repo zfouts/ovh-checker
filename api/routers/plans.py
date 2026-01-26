@@ -135,6 +135,15 @@ async def update_discord_webhook(
     return {"status": "ok", "message": "Discord webhook URL updated"}
 
 
+@router.delete("/api/config/discord-webhook")
+async def delete_discord_webhook(
+    admin: AuthenticatedUser = Depends(get_current_admin)
+):
+    """Delete default Discord webhook URL. Requires admin access."""
+    await db.set_config("discord_webhook_url", "")
+    return {"status": "ok", "message": "Discord webhook URL deleted"}
+
+
 @router.post("/api/config/discord-webhook/test", response_model=TestWebhookResponse)
 async def test_discord_webhook(admin: AuthenticatedUser = Depends(get_current_admin)):
     """Test the configured default Discord webhook. Requires admin access."""

@@ -101,8 +101,8 @@ class WebhookNotifier:
     @staticmethod
     async def send_test_notification(
         webhook_url: str,
-        webhook_type: str = None,
-        bot_username: str = None
+        webhook_type: Optional[str] = None,
+        bot_username: Optional[str] = None
     ) -> Tuple[bool, str]:
         """Send a test notification to verify webhook is working."""
         if not webhook_type:
@@ -124,8 +124,8 @@ class WebhookNotifier:
         out_of_stock_minutes: int,
         plan_info: Optional[Dict[str, Any]] = None,
         subsidiary: str = 'US',
-        bot_username: str = None,
-        webhook_name: str = None,
+        bot_username: Optional[str] = None,
+        webhook_name: Optional[str] = None,
         **kwargs
     ) -> Tuple[bool, Optional[str]]:
         """Send a stock notification."""
