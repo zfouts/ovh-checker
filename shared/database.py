@@ -21,6 +21,15 @@ from .models import Base
 
 def get_database_url() -> str:
     """Build database URL from environment variables."""
+    # First check for complete DATABASE_URL (used by checker)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Convert from postgresql:// to postgresql+asyncpg:// if needed
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return database_url
+    
+    # Fall back to individual env vars
     host = os.getenv("DATABASE_HOST", "localhost")
     port = os.getenv("DATABASE_PORT", "5432")
     user = os.getenv("DATABASE_USER", "postgres")
