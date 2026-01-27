@@ -3,10 +3,12 @@ kind: Kustomization
 
 namespace: ovh-checker
 
-# NOTE: secrets.yaml is NOT included - create it from secrets.yaml.example
-# and populate with real values before deployment:
-#   cp secrets.yaml.example secrets.yaml
-#   # Edit secrets.yaml with secure values
+# ============================================================================
+# BEFORE DEPLOYING:
+# 1. Create secrets.yaml from secrets.yaml.example with real values
+# 2. Update image references in api.yaml and checker.yaml to your registry
+# 3. Update ingress.yaml with your domain name
+# ============================================================================
 #
 # Database schema is initialized automatically by the API and checker
 # applications using SQLAlchemy at startup - no init.sql required.
@@ -17,6 +19,15 @@ resources:
   - checker.yaml
   - api.yaml
   - ingress.yaml
+
+# Optionally use images transformer to override image references:
+# images:
+#   - name: ghcr.io/YOUR_USERNAME/ovh-checker-api
+#     newName: your-registry/ovh-checker-api
+#     newTag: v1.0.0
+#   - name: ghcr.io/YOUR_USERNAME/ovh-checker-checker
+#     newName: your-registry/ovh-checker-checker
+#     newTag: v1.0.0
 
 labels:
   - pairs:

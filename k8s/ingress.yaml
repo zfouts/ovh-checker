@@ -4,17 +4,19 @@ metadata:
   name: ovh-checker-api
   namespace: ovh-checker
   annotations:
+    # Adjust these annotations for your ingress controller and cert manager
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/hostname: ovh-checker.k8s.biz
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+    # external-dns.alpha.kubernetes.io/hostname: ovh-checker.example.com
+    # external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
+  # Change ingressClassName to match your cluster (nginx, traefik, etc.)
   ingressClassName: traefik
   tls:
   - hosts:
-    - ovh-checker.k8s.biz
+    - ovh-checker.example.com  # CHANGE: Your domain
     secretName: ovh-checker-tls
   rules:
-  - host: ovh-checker.k8s.biz
+  - host: ovh-checker.example.com  # CHANGE: Your domain
     http:
       paths:
       - path: /

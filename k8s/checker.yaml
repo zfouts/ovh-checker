@@ -44,7 +44,7 @@ spec:
                 - "true"
       containers:
         - name: checker
-          image: ghcr.io/zfouts/ovh-checker-checker:latest
+          image: ghcr.io/YOUR_USERNAME/ovh-checker-checker:latest  # CHANGE: Your registry
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
@@ -142,7 +142,7 @@ spec:
                 - "true"
       containers:
         - name: checker
-          image: ghcr.io/zfouts/ovh-checker-checker:latest
+          image: ghcr.io/YOUR_USERNAME/ovh-checker-checker:latest  # CHANGE: Your registry
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false

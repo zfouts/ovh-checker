@@ -35,7 +35,8 @@ spec:
                 - "true"
       containers:
         - name: api
-          image: ghcr.io/zfouts/ovh-checker-api:latest
+          # CHANGE: Update to your container registry
+          image: ghcr.io/YOUR_USERNAME/ovh-checker-api:latest
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
